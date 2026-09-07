@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { money, paymentBadgeClass, statusBadgeClass } from '@/lib/format';
@@ -90,6 +90,12 @@ function registerPayment(): void {
 function savePurchase(): void {
     purchaseForm.post(`/orders/${props.order.id}/purchase`, { preserveScroll: true });
 }
+
+function cancelOrder(): void {
+    if (confirm('¿Seguro que quieres cancelar este pedido?')) {
+        router.post(`/orders/${props.order.id}/cancel`);
+    }
+}
 </script>
 
 <template>
@@ -106,6 +112,23 @@ function savePurchase(): void {
                     {{ order.payment_status_label }}
                 </span>
             </div>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+            <Link
+                :href="`/orders/${order.id}/edit`"
+                class="rounded-lg border border-sidebar-border/70 px-3 py-1.5 text-sm font-medium hover:bg-muted dark:border-sidebar-border"
+            >
+                Editar
+            </Link>
+            <button
+                v-if="order.status !== 'cancelled'"
+                type="button"
+                class="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-900/60 dark:text-red-400 dark:hover:bg-red-950/40"
+                @click="cancelOrder"
+            >
+                Cancelar pedido
+            </button>
         </div>
 
         <div class="grid gap-6 lg:grid-cols-3">

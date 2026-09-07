@@ -180,3 +180,81 @@ test('admin can record the purchase amount and commission', function () {
         ->and((float) $order->commission)->toBe(40.0)
         ->and((float) $order->total)->toBe(290.0);
 });
+
+test('admin can edit an order and its items', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $client = Client::factory()->create();
+    $address = Address::factory()->for($client)->create();
+    $newAddress = Address::factory()->for($client)->create();
+    $order = Order::factory()->create([
+        'client_id' => $client->id,
+        'address_id' => $address->id,
+        'created_by' => $admin->id,
+        'shopping_list' => 'lista vieja',
+    ]);
+
+    $this->actingAs($admin)->put("/orders/{$order->id}", [
+        'address_id' => $newAddress->id,
+        'shopping_list' => 'lista nueva',
+        'commission' => 20,
+        'items' => [
+            ['name' => 'Pan', 'quantity' => 3, 'unit_price' => 10],
+        ],
+    ])->assertRedirect("/orders/{$order->id}");
+
+    $order->refresh();
+
+    expect($order->address_id)->toBe($newAddress->id)
+        ->and($order->shopping_list)->toBe('lista nueva')
+        ->and($order->items)->toHaveCount(1)
+        ->and((float) $order->items_subtotal)->toBe(30.0)
+        ->and((float) $order->total)->toBe(50.0);
+});
+
+test('editing an order rejects an address from another client', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $client = Client::factory()->create();
+    $address = Address::factory()->for($client)->create();
+    $order = Order::factory()->create([
+        'client_id' => $client->id,
+        'address_id' => $address->id,
+        'created_by' => $admin->id,
+    ]);
+    $foreignAddress = Address::factory()->create();
+
+    $this->actingAs($admin)->put("/orders/{$order->id}", [
+        'address_id' => $foreignAddress->id,
+        'shopping_list' => 'algo',
+    ])->assertSessionHasErrors('address_id');
+});
+
+test('admin can cancel an order', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $client = Client::factory()->create();
+    $address = Address::factory()->for($client)->create();
+    $order = Order::factory()->create([
+        'client_id' => $client->id,
+        'address_id' => $address->id,
+        'created_by' => $admin->id,
+        'status' => OrderStatus::Assigned,
+    ]);
+
+    $this->actingAs($admin)->post("/orders/{$order->id}/cancel")->assertRedirect('/orders');
+
+    expect($order->refresh()->status)->toBe(OrderStatus::Cancelled);
+});
+
+test('couriers cannot edit or cancel orders', function () {
+    $courier = User::factory()->create(['role' => UserRole::Courier]);
+    $client = Client::factory()->create();
+    $address = Address::factory()->for($client)->create();
+    $order = Order::factory()->create([
+        'client_id' => $client->id,
+        'address_id' => $address->id,
+        'created_by' => $courier->id,
+        'courier_id' => $courier->id,
+    ]);
+
+    $this->actingAs($courier)->get("/orders/{$order->id}/edit")->assertForbidden();
+    $this->actingAs($courier)->post("/orders/{$order->id}/cancel")->assertForbidden();
+});

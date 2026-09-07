@@ -104,11 +104,14 @@ class Order extends Model
      */
     public function recalculateTotals(): void
     {
-        $subtotal = (float) $this->items()->whereNotNull('line_total')->sum('line_total');
+        // Derive the subtotal from priced items when they exist; otherwise keep
+        // any manually recorded amount (see recordPurchase on the controller).
+        if ($this->items()->whereNotNull('line_total')->exists()) {
+            $this->items_subtotal = (float) $this->items()->whereNotNull('line_total')->sum('line_total');
+        }
 
-        $this->items_subtotal = $subtotal > 0 ? $subtotal : null;
         $this->total = $this->items_subtotal !== null
-            ? round($subtotal + (float) ($this->commission ?? 0), 2)
+            ? round((float) $this->items_subtotal + (float) ($this->commission ?? 0), 2)
             : null;
 
         $this->save();

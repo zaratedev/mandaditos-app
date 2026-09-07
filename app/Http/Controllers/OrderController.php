@@ -12,6 +12,7 @@ use App\Http\Requests\AssignOrderRequest;
 use App\Http\Requests\RecordPurchaseRequest;
 use App\Http\Requests\RegisterPaymentRequest;
 use App\Http\Requests\StoreOrderRequest;
+use App\Http\Requests\UpdateOrderRequest;
 use App\Models\Client;
 use App\Models\Order;
 use App\Models\User;
@@ -100,6 +101,8 @@ class OrderController extends Controller
             return $order;
         });
 
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Order created.')]);
+
         return redirect()->route('orders.show', $order);
     }
 
@@ -146,6 +149,77 @@ class OrderController extends Controller
         ]);
     }
 
+    public function edit(Order $order): Response
+    {
+        $order->load(['client:id,name', 'items']);
+
+        return Inertia::render('orders/Edit', [
+            'order' => [
+                'id' => $order->id,
+                'client' => $order->client->only(['id', 'name']),
+                'address_id' => $order->address_id,
+                'courier_id' => $order->courier_id,
+                'shopping_list' => $order->shopping_list,
+                'commission' => $order->commission,
+                'notes' => $order->notes,
+                'items' => $order->items->map(fn ($item): array => [
+                    'name' => $item->name,
+                    'quantity' => $item->quantity,
+                    'unit_price' => $item->unit_price,
+                ]),
+            ],
+            'addresses' => $order->client->addresses()
+                ->orderBy('id')
+                ->get(['id', 'label', 'street', 'neighborhood', 'city']),
+            'couriers' => $this->couriers(),
+        ]);
+    }
+
+    public function update(UpdateOrderRequest $request, Order $order): RedirectResponse
+    {
+        $data = $request->validated();
+
+        DB::transaction(function () use ($data, $order): void {
+            $order->update([
+                'address_id' => $data['address_id'],
+                'courier_id' => $data['courier_id'] ?? null,
+                'shopping_list' => $data['shopping_list'],
+                'commission' => $data['commission'] ?? null,
+                'notes' => $data['notes'] ?? null,
+            ]);
+
+            $order->items()->delete();
+
+            foreach ($data['items'] ?? [] as $item) {
+                $quantity = (float) ($item['quantity'] ?? 1);
+                $unitPrice = isset($item['unit_price']) ? (float) $item['unit_price'] : null;
+
+                $order->items()->create([
+                    'name' => $item['name'],
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'line_total' => $unitPrice !== null ? round($quantity * $unitPrice, 2) : null,
+                ]);
+            }
+
+            $order->recalculateTotals();
+        });
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Order updated.')]);
+
+        return redirect()->route('orders.show', $order);
+    }
+
+    public function cancel(Order $order): RedirectResponse
+    {
+        $order->status = OrderStatus::Cancelled;
+        $order->save();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Order cancelled.')]);
+
+        return redirect()->route('orders.index');
+    }
+
     public function assign(AssignOrderRequest $request, Order $order): RedirectResponse
     {
         $order->courier_id = $request->integer('courier_id');
@@ -156,6 +230,8 @@ class OrderController extends Controller
 
         $order->confirmed_at ??= now();
         $order->save();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Courier assigned.')]);
 
         return back();
     }
@@ -178,6 +254,8 @@ class OrderController extends Controller
 
         $order->save();
 
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Status updated.')]);
+
         return back();
     }
 
@@ -187,6 +265,8 @@ class OrderController extends Controller
         $order->payment_status = PaymentStatus::Paid;
         $order->paid_at = now();
         $order->save();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Payment recorded.')]);
 
         return back();
     }
@@ -202,6 +282,8 @@ class OrderController extends Controller
         $order->commission = $data['commission'];
         $order->total = round((float) $data['items_subtotal'] + (float) $data['commission'], 2);
         $order->save();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Purchase recorded.')]);
 
         return back();
     }

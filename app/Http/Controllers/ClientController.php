@@ -49,6 +49,8 @@ class ClientController extends Controller
             ]);
         });
 
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Client created.')]);
+
         return redirect()->route('clients.index');
     }
 }

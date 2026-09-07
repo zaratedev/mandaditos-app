@@ -93,6 +93,8 @@ class CourierBoardController extends Controller
 
         $order->save();
 
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Status updated.')]);
+
         return back();
     }
 
