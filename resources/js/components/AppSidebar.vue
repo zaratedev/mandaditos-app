@@ -29,11 +29,15 @@ const mainNavItems = computed<NavItem[]>(() => {
         },
     ];
 
-    if ((page.props.auth.user.role as string) === 'admin') {
+    const role = page.props.auth.user.role as string;
+
+    if (role === 'admin') {
         items.push(
             { title: 'Pedidos', href: '/orders', icon: ShoppingBag },
             { title: 'Clientes', href: '/clients', icon: Users },
         );
+    } else if (role === 'courier') {
+        items.push({ title: 'Mis pedidos', href: '/board', icon: ShoppingBag });
     }
 
     return items;
