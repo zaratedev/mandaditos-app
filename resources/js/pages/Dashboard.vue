@@ -28,13 +28,13 @@ defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Dashboard', href: '/dashboard' }],
+        breadcrumbs: [{ title: 'Panel', href: '/dashboard' }],
     },
 });
 </script>
 
 <template>
-    <Head title="Dashboard" />
+    <Head title="Panel" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <template v-if="isAdmin">
