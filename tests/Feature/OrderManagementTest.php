@@ -158,3 +158,25 @@ test('couriers see their own dashboard without the cash cut', function () {
 
     $this->actingAs($courier)->get('/dashboard')->assertOk();
 });
+
+test('admin can record the purchase amount and commission', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $client = Client::factory()->create();
+    $address = Address::factory()->for($client)->create();
+    $order = Order::factory()->create([
+        'client_id' => $client->id,
+        'address_id' => $address->id,
+        'created_by' => $admin->id,
+        'status' => OrderStatus::Purchasing,
+    ]);
+
+    $this->actingAs($admin)
+        ->post("/orders/{$order->id}/purchase", ['items_subtotal' => 250, 'commission' => 40])
+        ->assertRedirect();
+
+    $order->refresh();
+
+    expect((float) $order->items_subtotal)->toBe(250.0)
+        ->and((float) $order->commission)->toBe(40.0)
+        ->and((float) $order->total)->toBe(290.0);
+});

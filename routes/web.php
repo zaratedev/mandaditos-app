@@ -24,6 +24,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
         Route::post('orders/{order}/assign', [OrderController::class, 'assign'])->name('orders.assign');
         Route::post('orders/{order}/status', [OrderController::class, 'advanceStatus'])->name('orders.status');
+        Route::post('orders/{order}/purchase', [OrderController::class, 'recordPurchase'])->name('orders.purchase');
         Route::post('orders/{order}/payment', [OrderController::class, 'registerPayment'])->name('orders.payment');
 
         Route::get('clients', [ClientController::class, 'index'])->name('clients.index');

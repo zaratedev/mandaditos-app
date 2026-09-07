@@ -67,6 +67,11 @@ const paymentForm = useForm<{ payment_method: string }>({
     payment_method: props.order.payment_method ?? '',
 });
 
+const purchaseForm = useForm<{ items_subtotal: number | null; commission: number | null }>({
+    items_subtotal: props.order.items_subtotal ? Number(props.order.items_subtotal) : null,
+    commission: props.order.commission ? Number(props.order.commission) : null,
+});
+
 const selectClass =
     'rounded-lg border border-sidebar-border/70 bg-transparent px-3 py-2 text-sm dark:border-sidebar-border';
 
@@ -80,6 +85,10 @@ function changeStatus(): void {
 
 function registerPayment(): void {
     paymentForm.post(`/orders/${props.order.id}/payment`, { preserveScroll: true });
+}
+
+function savePurchase(): void {
+    purchaseForm.post(`/orders/${props.order.id}/purchase`, { preserveScroll: true });
 }
 </script>
 
@@ -175,6 +184,38 @@ function registerPayment(): void {
                             <option v-for="option in statuses" :key="option.value" :value="option.value">{{ option.label }}</option>
                         </select>
                         <Button size="sm" :disabled="statusForm.processing" @click="changeStatus">Actualizar estado</Button>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+                    <h2 class="mb-3 text-base font-semibold">Registrar compra</h2>
+                    <div class="grid gap-2">
+                        <label for="items_subtotal" class="text-sm text-muted-foreground">Total de la compra</label>
+                        <input
+                            id="items_subtotal"
+                            v-model.number="purchaseForm.items_subtotal"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            class="w-full"
+                            :class="selectClass"
+                        />
+                        <InputError :message="purchaseForm.errors.items_subtotal" />
+
+                        <label for="commission_amount" class="text-sm text-muted-foreground">Comisión</label>
+                        <input
+                            id="commission_amount"
+                            v-model.number="purchaseForm.commission"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            class="w-full"
+                            :class="selectClass"
+                        />
+                        <InputError :message="purchaseForm.errors.commission" />
+
+                        <Button size="sm" :disabled="purchaseForm.processing" @click="savePurchase">Guardar montos</Button>
+                        <p class="text-xs text-muted-foreground">Total a cobrar = compra + comisión.</p>
                     </div>
                 </div>
 

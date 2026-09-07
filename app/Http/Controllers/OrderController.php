@@ -9,6 +9,7 @@ use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\UserRole;
 use App\Http\Requests\AssignOrderRequest;
+use App\Http\Requests\RecordPurchaseRequest;
 use App\Http\Requests\RegisterPaymentRequest;
 use App\Http\Requests\StoreOrderRequest;
 use App\Models\Client;
@@ -185,6 +186,21 @@ class OrderController extends Controller
         $order->payment_method = PaymentMethod::from($request->string('payment_method')->toString());
         $order->payment_status = PaymentStatus::Paid;
         $order->paid_at = now();
+        $order->save();
+
+        return back();
+    }
+
+    /**
+     * Record the actual purchase amount and commission after the courier shops.
+     */
+    public function recordPurchase(RecordPurchaseRequest $request, Order $order): RedirectResponse
+    {
+        $data = $request->validated();
+
+        $order->items_subtotal = $data['items_subtotal'];
+        $order->commission = $data['commission'];
+        $order->total = round((float) $data['items_subtotal'] + (float) $data['commission'], 2);
         $order->save();
 
         return back();
