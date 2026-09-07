@@ -98,4 +98,19 @@ class Order extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
+
+    /**
+     * Recalculate the money totals from the priced order items.
+     */
+    public function recalculateTotals(): void
+    {
+        $subtotal = (float) $this->items()->whereNotNull('line_total')->sum('line_total');
+
+        $this->items_subtotal = $subtotal > 0 ? $subtotal : null;
+        $this->total = $this->items_subtotal !== null
+            ? round($subtotal + (float) ($this->commission ?? 0), 2)
+            : null;
+
+        $this->save();
+    }
 }

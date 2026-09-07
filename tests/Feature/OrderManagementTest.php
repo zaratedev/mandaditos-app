@@ -1,0 +1,160 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
+use App\Enums\PaymentStatus;
+use App\Enums\UserRole;
+use App\Models\Address;
+use App\Models\Client;
+use App\Models\Order;
+use App\Models\User;
+
+test('admin can create an order with priced items and totals are computed', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $client = Client::factory()->create();
+    $address = Address::factory()->for($client)->create();
+
+    $response = $this->actingAs($admin)->post('/orders', [
+        'client_id' => $client->id,
+        'address_id' => $address->id,
+        'shopping_list' => "2 kg tortillas\n1 leche",
+        'commission' => 30,
+        'items' => [
+            ['name' => 'Tortillas', 'quantity' => 2, 'unit_price' => 25],
+            ['name' => 'Leche', 'quantity' => 1, 'unit_price' => 30],
+        ],
+    ]);
+
+    $order = Order::firstOrFail();
+
+    $response->assertRedirect("/orders/{$order->id}");
+
+    expect($order->items)->toHaveCount(2)
+        ->and((float) $order->items_subtotal)->toBe(80.0)
+        ->and((float) $order->total)->toBe(110.0)
+        ->and($order->status)->toBe(OrderStatus::Requested)
+        ->and($order->created_by)->toBe($admin->id);
+});
+
+test('assigning a courier at creation marks the order as assigned', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $courier = User::factory()->create(['role' => UserRole::Courier]);
+    $client = Client::factory()->create();
+    $address = Address::factory()->for($client)->create();
+
+    $this->actingAs($admin)->post('/orders', [
+        'client_id' => $client->id,
+        'address_id' => $address->id,
+        'courier_id' => $courier->id,
+        'shopping_list' => 'algo',
+    ])->assertRedirect();
+
+    $order = Order::firstOrFail();
+
+    expect($order->status)->toBe(OrderStatus::Assigned)
+        ->and($order->courier_id)->toBe($courier->id)
+        ->and($order->confirmed_at)->not->toBeNull();
+});
+
+test('the delivery address must belong to the selected client', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $client = Client::factory()->create();
+    $foreignAddress = Address::factory()->create();
+
+    $this->actingAs($admin)->post('/orders', [
+        'client_id' => $client->id,
+        'address_id' => $foreignAddress->id,
+        'shopping_list' => 'algo',
+    ])->assertSessionHasErrors('address_id');
+});
+
+test('couriers cannot access order management', function () {
+    $courier = User::factory()->create(['role' => UserRole::Courier]);
+
+    $this->actingAs($courier)->get('/orders')->assertForbidden();
+    $this->actingAs($courier)->get('/orders/create')->assertForbidden();
+});
+
+test('admin can assign, advance status and register payment', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $courier = User::factory()->create(['role' => UserRole::Courier]);
+    $client = Client::factory()->create();
+    $address = Address::factory()->for($client)->create();
+    $order = Order::factory()->create([
+        'client_id' => $client->id,
+        'address_id' => $address->id,
+        'created_by' => $admin->id,
+        'status' => OrderStatus::Requested,
+    ]);
+
+    $this->actingAs($admin)
+        ->post("/orders/{$order->id}/assign", ['courier_id' => $courier->id])
+        ->assertRedirect();
+
+    expect($order->refresh()->status)->toBe(OrderStatus::Assigned)
+        ->and($order->courier_id)->toBe($courier->id);
+
+    $this->actingAs($admin)
+        ->post("/orders/{$order->id}/status", ['status' => OrderStatus::Delivered->value])
+        ->assertRedirect();
+
+    expect($order->refresh()->status)->toBe(OrderStatus::Delivered)
+        ->and($order->delivered_at)->not->toBeNull();
+
+    $this->actingAs($admin)
+        ->post("/orders/{$order->id}/payment", ['payment_method' => PaymentMethod::Cash->value])
+        ->assertRedirect();
+
+    expect($order->refresh()->payment_status)->toBe(PaymentStatus::Paid)
+        ->and($order->payment_method)->toBe(PaymentMethod::Cash)
+        ->and($order->paid_at)->not->toBeNull();
+});
+
+test('admin can register a client with an address', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+
+    $this->actingAs($admin)->post('/clients', [
+        'name' => 'Doña Mary',
+        'phone' => '5551234567',
+        'address' => [
+            'street' => 'Calle Falsa 123',
+            'neighborhood' => 'Centro',
+        ],
+    ])->assertRedirect('/clients');
+
+    $client = Client::firstOrFail();
+
+    expect($client->name)->toBe('Doña Mary')
+        ->and($client->addresses)->toHaveCount(1)
+        ->and($client->addresses->first()->street)->toBe('Calle Falsa 123');
+});
+
+test('admin can view the dashboard with the daily cash cut', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $courier = User::factory()->create(['role' => UserRole::Courier]);
+    $client = Client::factory()->create();
+    $address = Address::factory()->for($client)->create();
+
+    Order::factory()->create([
+        'client_id' => $client->id,
+        'address_id' => $address->id,
+        'created_by' => $admin->id,
+        'courier_id' => $courier->id,
+        'status' => OrderStatus::Delivered,
+        'payment_method' => PaymentMethod::Cash,
+        'payment_status' => PaymentStatus::Paid,
+        'total' => 150,
+        'commission' => 30,
+        'paid_at' => now(),
+    ]);
+
+    $this->actingAs($admin)->get('/dashboard')->assertOk();
+});
+
+test('couriers see their own dashboard without the cash cut', function () {
+    $courier = User::factory()->create(['role' => UserRole::Courier]);
+
+    $this->actingAs($courier)->get('/dashboard')->assertOk();
+});

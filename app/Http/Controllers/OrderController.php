@@ -1,0 +1,213 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers;
+
+use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
+use App\Enums\PaymentStatus;
+use App\Enums\UserRole;
+use App\Http\Requests\AssignOrderRequest;
+use App\Http\Requests\RegisterPaymentRequest;
+use App\Http\Requests\StoreOrderRequest;
+use App\Models\Client;
+use App\Models\Order;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class OrderController extends Controller
+{
+    public function index(Request $request): Response
+    {
+        $status = $request->string('status')->toString();
+
+        $orders = Order::query()
+            ->with(['client:id,name', 'courier:id,name'])
+            ->when($status !== '', fn ($query) => $query->where('status', $status))
+            ->latest()
+            ->paginate(15)
+            ->withQueryString()
+            ->through(fn (Order $order): array => [
+                'id' => $order->id,
+                'client' => $order->client?->name,
+                'courier' => $order->courier?->name,
+                'status' => $order->status->value,
+                'status_label' => $order->status->label(),
+                'total' => $order->total,
+                'payment_status' => $order->payment_status->value,
+                'payment_status_label' => $order->payment_status->label(),
+                'created_at' => $order->created_at?->format('Y-m-d H:i'),
+            ]);
+
+        return Inertia::render('orders/Index', [
+            'orders' => $orders,
+            'filters' => ['status' => $status],
+            'statuses' => $this->statusOptions(),
+        ]);
+    }
+
+    public function create(): Response
+    {
+        return Inertia::render('orders/Create', [
+            'clients' => Client::query()
+                ->with('addresses:id,client_id,label,street,neighborhood,city')
+                ->orderBy('name')
+                ->get(['id', 'name', 'phone']),
+            'couriers' => $this->couriers(),
+        ]);
+    }
+
+    public function store(StoreOrderRequest $request): RedirectResponse
+    {
+        $data = $request->validated();
+
+        $order = DB::transaction(function () use ($data, $request): Order {
+            $order = Order::create([
+                'client_id' => $data['client_id'],
+                'address_id' => $data['address_id'],
+                'courier_id' => $data['courier_id'] ?? null,
+                'status' => isset($data['courier_id']) ? OrderStatus::Assigned : OrderStatus::Requested,
+                'shopping_list' => $data['shopping_list'],
+                'commission' => $data['commission'] ?? null,
+                'notes' => $data['notes'] ?? null,
+                'payment_status' => PaymentStatus::Pending,
+                'created_by' => $request->user()->id,
+                'confirmed_at' => isset($data['courier_id']) ? now() : null,
+            ]);
+
+            foreach ($data['items'] ?? [] as $item) {
+                $quantity = (float) ($item['quantity'] ?? 1);
+                $unitPrice = isset($item['unit_price']) ? (float) $item['unit_price'] : null;
+
+                $order->items()->create([
+                    'name' => $item['name'],
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'line_total' => $unitPrice !== null ? round($quantity * $unitPrice, 2) : null,
+                ]);
+            }
+
+            $order->recalculateTotals();
+
+            return $order;
+        });
+
+        return redirect()->route('orders.show', $order);
+    }
+
+    public function show(Order $order): Response
+    {
+        $order->load(['client', 'address', 'courier:id,name', 'creator:id,name', 'items']);
+
+        return Inertia::render('orders/Show', [
+            'order' => [
+                'id' => $order->id,
+                'shopping_list' => $order->shopping_list,
+                'notes' => $order->notes,
+                'items_subtotal' => $order->items_subtotal,
+                'commission' => $order->commission,
+                'total' => $order->total,
+                'status' => $order->status->value,
+                'status_label' => $order->status->label(),
+                'payment_method' => $order->payment_method?->value,
+                'payment_method_label' => $order->payment_method?->label(),
+                'payment_status' => $order->payment_status->value,
+                'payment_status_label' => $order->payment_status->label(),
+                'client' => $order->client->only(['id', 'name', 'phone']),
+                'address' => $order->address->only(['id', 'label', 'street', 'neighborhood', 'city', 'landmark']),
+                'courier' => $order->courier?->only(['id', 'name']),
+                'creator' => $order->creator?->only(['id', 'name']),
+                'items' => $order->items->map(fn ($item): array => [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'quantity' => $item->quantity,
+                    'unit_price' => $item->unit_price,
+                    'line_total' => $item->line_total,
+                ]),
+                'created_at' => $order->created_at?->format('Y-m-d H:i'),
+                'confirmed_at' => $order->confirmed_at?->format('Y-m-d H:i'),
+                'purchased_at' => $order->purchased_at?->format('Y-m-d H:i'),
+                'delivered_at' => $order->delivered_at?->format('Y-m-d H:i'),
+                'paid_at' => $order->paid_at?->format('Y-m-d H:i'),
+            ],
+            'couriers' => $this->couriers(),
+            'statuses' => $this->statusOptions(),
+            'paymentMethods' => collect(PaymentMethod::cases())
+                ->map(fn (PaymentMethod $method): array => ['value' => $method->value, 'label' => $method->label()])
+                ->all(),
+        ]);
+    }
+
+    public function assign(AssignOrderRequest $request, Order $order): RedirectResponse
+    {
+        $order->courier_id = $request->integer('courier_id');
+
+        if (in_array($order->status, [OrderStatus::Requested, OrderStatus::Confirmed], true)) {
+            $order->status = OrderStatus::Assigned;
+        }
+
+        $order->confirmed_at ??= now();
+        $order->save();
+
+        return back();
+    }
+
+    public function advanceStatus(Request $request, Order $order): RedirectResponse
+    {
+        $validated = $request->validate([
+            'status' => ['required', Rule::enum(OrderStatus::class)],
+        ]);
+
+        $status = OrderStatus::from($validated['status']);
+        $order->status = $status;
+
+        match ($status) {
+            OrderStatus::Confirmed => $order->confirmed_at ??= now(),
+            OrderStatus::Purchased => $order->purchased_at ??= now(),
+            OrderStatus::Delivered => $order->delivered_at ??= now(),
+            default => null,
+        };
+
+        $order->save();
+
+        return back();
+    }
+
+    public function registerPayment(RegisterPaymentRequest $request, Order $order): RedirectResponse
+    {
+        $order->payment_method = PaymentMethod::from($request->string('payment_method')->toString());
+        $order->payment_status = PaymentStatus::Paid;
+        $order->paid_at = now();
+        $order->save();
+
+        return back();
+    }
+
+    /**
+     * @return array<int, array{value: string, label: string}>
+     */
+    private function statusOptions(): array
+    {
+        return collect(OrderStatus::cases())
+            ->map(fn (OrderStatus $status): array => ['value' => $status->value, 'label' => $status->label()])
+            ->all();
+    }
+
+    /**
+     * @return Collection<int, User>
+     */
+    private function couriers(): Collection
+    {
+        return User::query()
+            ->where('role', UserRole::Courier->value)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+    }
+}
