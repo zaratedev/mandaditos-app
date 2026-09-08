@@ -6,6 +6,8 @@ namespace App\Notifications;
 
 use App\Models\Order;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\WebPush\WebPushChannel;
+use NotificationChannels\WebPush\WebPushMessage;
 
 class OrderDelivered extends Notification
 {
@@ -16,7 +18,7 @@ class OrderDelivered extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', WebPushChannel::class];
     }
 
     /**
@@ -32,5 +34,16 @@ class OrderDelivered extends Notification
             'message' => "Pedido #{$this->order->id} entregado por {$courier}.",
             'url' => "/orders/{$this->order->id}",
         ];
+    }
+
+    public function toWebPush(object $notifiable, mixed $notification): WebPushMessage
+    {
+        $courier = $this->order->courier?->name ?? 'Un repartidor';
+
+        return (new WebPushMessage())
+            ->title('Pedido entregado')
+            ->body("Pedido #{$this->order->id} entregado por {$courier}.")
+            ->icon('/icons/icon-192.png')
+            ->data(['url' => "/orders/{$this->order->id}"]);
     }
 }

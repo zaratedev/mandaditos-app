@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
+import PushNotificationsToggle from '@/components/PushNotificationsToggle.vue';
 import { Button } from '@/components/ui/button';
 
 interface NotificationRow {
@@ -37,6 +38,8 @@ function markAll(): void {
             <h1 class="text-xl font-semibold">Notificaciones</h1>
             <Button variant="outline" size="sm" @click="markAll">Marcar todo como leído</Button>
         </div>
+
+        <PushNotificationsToggle />
 
         <div
             v-if="notifications.length === 0"

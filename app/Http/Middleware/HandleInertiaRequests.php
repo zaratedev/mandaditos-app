@@ -42,6 +42,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'unreadNotifications' => $request->user()?->unreadNotifications()->count() ?? 0,
+            'vapidPublicKey' => config('webpush.vapid.public_key'),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }
