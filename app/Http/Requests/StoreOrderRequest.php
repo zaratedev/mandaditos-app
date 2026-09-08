@@ -30,7 +30,9 @@ class StoreOrderRequest extends FormRequest
             'courier_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('users', 'id')->where('role', UserRole::Courier->value),
+                Rule::exists('users', 'id')->where(fn ($query) => $query
+                    ->where('role', UserRole::Courier->value)
+                    ->where('is_active', true)),
             ],
             'shopping_list' => ['required', 'string'],
             'commission' => ['nullable', 'numeric', 'min:0'],

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { ChartColumn, LayoutGrid, ShoppingBag, Users } from '@lucide/vue';
+import { Bike, ChartColumn, LayoutGrid, ShoppingBag, Users } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -34,6 +34,7 @@ const mainNavItems = computed<NavItem[]>(() => {
         items.push(
             { title: 'Pedidos', href: '/orders', icon: ShoppingBag },
             { title: 'Clientes', href: '/clients', icon: Users },
+            { title: 'Repartidores', href: '/couriers', icon: Bike },
             { title: 'Reportes', href: '/reports', icon: ChartColumn },
         );
     } else if (role === 'courier') {

@@ -24,7 +24,9 @@ class AssignOrderRequest extends FormRequest
             'courier_id' => [
                 'required',
                 'integer',
-                Rule::exists('users', 'id')->where('role', UserRole::Courier->value),
+                Rule::exists('users', 'id')->where(fn ($query) => $query
+                    ->where('role', UserRole::Courier->value)
+                    ->where('is_active', true)),
             ],
         ];
     }

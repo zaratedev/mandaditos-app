@@ -18,6 +18,17 @@ trait PasswordValidationRules
     }
 
     /**
+     * Get the validation rules for a password that may be left blank, keeping the
+     * existing one. Used when an admin edits an account without rotating its password.
+     *
+     * @return array<int, Password|ValidationRule|array<mixed>|string>
+     */
+    protected function optionalPasswordRules(): array
+    {
+        return ['nullable', 'string', Password::default(), 'confirmed'];
+    }
+
+    /**
      * Get the validation rules used to validate the current password.
      *
      * @return array<int, Password|ValidationRule|array<mixed>|string>

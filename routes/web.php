@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CourierBoardController;
+use App\Http\Controllers\CourierController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController;
@@ -41,6 +42,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('orders/{order}/status', [OrderController::class, 'advanceStatus'])->name('orders.status');
         Route::post('orders/{order}/purchase', [OrderController::class, 'recordPurchase'])->name('orders.purchase');
         Route::post('orders/{order}/payment', [OrderController::class, 'registerPayment'])->name('orders.payment');
+
+        Route::get('couriers', [CourierController::class, 'index'])->name('couriers.index');
+        Route::get('couriers/create', [CourierController::class, 'create'])->name('couriers.create');
+        Route::post('couriers', [CourierController::class, 'store'])->name('couriers.store');
+        Route::get('couriers/{courier}/edit', [CourierController::class, 'edit'])->name('couriers.edit');
+        Route::put('couriers/{courier}', [CourierController::class, 'update'])->name('couriers.update');
+        Route::post('couriers/{courier}/activate', [CourierController::class, 'activate'])->name('couriers.activate');
+        Route::post('couriers/{courier}/deactivate', [CourierController::class, 'deactivate'])->name('couriers.deactivate');
 
         Route::get('clients', [ClientController::class, 'index'])->name('clients.index');
         Route::get('clients/create', [ClientController::class, 'create'])->name('clients.create');

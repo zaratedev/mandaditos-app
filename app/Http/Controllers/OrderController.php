@@ -18,6 +18,7 @@ use App\Models\Order;
 use App\Models\User;
 use App\Notifications\OrderAssigned;
 use App\Notifications\OrderDelivered;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -100,7 +101,7 @@ class OrderController extends Controller
                 ->with('addresses:id,client_id,label,street,neighborhood,city')
                 ->orderBy('name')
                 ->get(['id', 'name', 'phone']),
-            'couriers' => $this->couriers(),
+            'couriers' => $this->assignableCouriers(),
         ]);
     }
 
@@ -183,7 +184,7 @@ class OrderController extends Controller
                 'delivered_at' => $order->delivered_at?->format('Y-m-d H:i'),
                 'paid_at' => $order->paid_at?->format('Y-m-d H:i'),
             ],
-            'couriers' => $this->couriers(),
+            'couriers' => $this->assignableCouriers($order->courier_id),
             'statuses' => $this->statusOptions(),
             'paymentMethods' => collect(PaymentMethod::cases())
                 ->map(fn (PaymentMethod $method): array => ['value' => $method->value, 'label' => $method->label()])
@@ -213,7 +214,7 @@ class OrderController extends Controller
             'addresses' => $order->client->addresses()
                 ->orderBy('id')
                 ->get(['id', 'label', 'street', 'neighborhood', 'city']),
-            'couriers' => $this->couriers(),
+            'couriers' => $this->assignableCouriers($order->courier_id),
         ]);
     }
 
@@ -351,13 +352,33 @@ class OrderController extends Controller
     }
 
     /**
+     * Every courier, active or not, so the list filters can still reach the orders of
+     * someone who has since been deactivated.
+     *
      * @return Collection<int, User>
      */
     private function couriers(): Collection
     {
         return User::query()
-            ->where('role', UserRole::Courier->value)
+            ->couriers()
             ->orderBy('name')
             ->get(['id', 'name']);
+    }
+
+    /**
+     * Couriers that may take work: the active ones, plus the courier already assigned
+     * to the order being edited, so a deactivation never blocks an unrelated edit.
+     *
+     * @return Collection<int, User>
+     */
+    private function assignableCouriers(?int $keepId = null): Collection
+    {
+        return User::query()
+            ->couriers()
+            ->where(fn (Builder $query) => $query
+                ->where('is_active', true)
+                ->when($keepId !== null, fn (Builder $inner) => $inner->orWhere('id', $keepId)))
+            ->orderBy('name')
+            ->get(['id', 'name', 'is_active']);
     }
 }

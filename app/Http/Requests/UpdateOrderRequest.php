@@ -33,7 +33,14 @@ class UpdateOrderRequest extends FormRequest
             'courier_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('users', 'id')->where('role', UserRole::Courier->value),
+                Rule::exists('users', 'id')->where(fn ($query) => $query
+                    ->where('role', UserRole::Courier->value)
+                    ->where(fn ($inner) => $inner
+                        ->where('is_active', true)
+                        ->when(
+                            $order->courier_id !== null,
+                            fn ($q) => $q->orWhere('id', $order->courier_id),
+                        ))),
             ],
             'shopping_list' => ['required', 'string'],
             'commission' => ['nullable', 'numeric', 'min:0'],

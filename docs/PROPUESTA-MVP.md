@@ -345,3 +345,30 @@ México. 58 pruebas en verde.
 3. **Mejoras de desglose.** El subtotal se deriva automáticamente de los productos con
    precio; edición de líneas de producto en crear/editar pedido; y desglose por producto
    en los reportes.
+
+---
+
+## 17. Módulo de repartidores (pendiente de Fase 1, cerrado después)
+
+El punto 3 del alcance del MVP (§7.1, *"Couriers — alta/edición"*) quedó sin construir: el
+recap de la Fase 1 (§16) no lo mencionaba y nadie lo notó. Mientras el registro público
+estuvo abierto, un repartidor se daba de alta solo y la columna `users.role` lo dejaba con
+el rol correcto por defecto; al desactivar el auto-registro, dar de alta a un repartidor
+pasó a requerir `tinker` o tocar la base de datos.
+
+Ya está construido:
+
+- **Alta y edición** de repartidores por el admin (`CourierController`), con la contraseña
+  inicial capturada por el propio admin. No hay invitación por correo porque `MAIL_MAILER`
+  todavía apunta a `log`; cuando se configure un correo real, migrar a un enlace de
+  "define tu contraseña" reutilizando el reset de Fortify es un cambio menor.
+- **Baja lógica, no borrado.** `users.is_active` decide si el repartidor puede entrar y si
+  puede recibir pedidos. No se borran porque `orders.courier_id` está declarado
+  `nullOnDelete`: eliminar un repartidor desasignaría en silencio su historial y rompería
+  el reporte de desempeño por repartidor.
+- **El acceso se corta de verdad.** Login bloqueado (Fortify) y sesión abierta terminada
+  en el siguiente request (middleware `EnsureUserIsActive`), que también cubre passkeys y
+  cookies de "recuérdame".
+- **Asignación.** Los desactivados desaparecen del selector de asignación y la validación
+  los rechaza; siguen disponibles como filtro en el listado de pedidos y se conservan en
+  el pedido que ya tenían asignado, para no romper una edición ajena.

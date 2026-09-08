@@ -8,5 +8,10 @@
     "Status updated.": "Estado actualizado.",
     "Payment recorded.": "Cobro registrado.",
     "Purchase recorded.": "Compra registrada.",
-    "Client created.": "Cliente creado."
+    "Client created.": "Cliente creado.",
+    "Courier created.": "Repartidor creado.",
+    "Courier updated.": "Repartidor actualizado.",
+    "Courier activated.": "Repartidor activado.",
+    "Courier deactivated.": "Repartidor desactivado.",
+    "This account has been deactivated.": "Esta cuenta está desactivada. Contacta al administrador."
 }
