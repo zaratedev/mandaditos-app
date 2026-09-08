@@ -8,6 +8,7 @@ interface ClientRow {
     name: string;
     phone: string | null;
     orders_count: number;
+    is_active: boolean;
     address: string | null;
 }
 
@@ -27,6 +28,7 @@ interface Filters {
     search: string;
     has_orders: string;
     sort: string;
+    status: string;
 }
 
 const props = defineProps<{
@@ -60,6 +62,12 @@ function clear(): void {
     });
 
     router.get('/clients', {}, { preserveState: true, replace: true });
+}
+
+function toggleArchive(client: ClientRow): void {
+    const action = client.is_active ? 'archive' : 'restore';
+
+    router.post(`/clients/${client.id}/${action}`, {}, { preserveScroll: true });
 }
 
 const fieldClass =
@@ -106,6 +114,15 @@ const fieldClass =
                 </div>
 
                 <div class="grid gap-1">
+                    <label for="f-status" class="text-xs text-muted-foreground">Estado</label>
+                    <Select id="f-status" v-model="form.status">
+                        <option value="">Activos</option>
+                        <option value="archived">Archivados</option>
+                        <option value="all">Todos</option>
+                    </Select>
+                </div>
+
+                <div class="grid gap-1">
                     <label for="f-sort" class="text-xs text-muted-foreground">Ordenar por</label>
                     <Select id="f-sort" v-model="form.sort">
                         <option value="">Nombre</option>
@@ -141,19 +158,39 @@ const fieldClass =
                         <th class="px-4 py-3 font-medium">Teléfono</th>
                         <th class="px-4 py-3 font-medium">Dirección principal</th>
                         <th class="px-4 py-3 text-right font-medium">Pedidos</th>
+                        <th class="px-4 py-3 text-right font-medium">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="client in clients.data" :key="client.id" class="border-b border-sidebar-border/40 dark:border-sidebar-border/60">
-                        <td class="px-4 py-3 font-medium">{{ client.name }}</td>
+                        <td class="px-4 py-3 font-medium">
+                            {{ client.name }}
+                            <span v-if="!client.is_active" class="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                Archivado
+                            </span>
+                        </td>
                         <td class="px-4 py-3">{{ client.phone ?? '—' }}</td>
                         <td class="px-4 py-3 text-muted-foreground">
                             {{ client.address ?? 'Sin dirección' }}
                         </td>
                         <td class="px-4 py-3 text-right">{{ client.orders_count }}</td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center justify-end gap-3">
+                                <Link :href="`/clients/${client.id}/edit`" class="text-sm text-primary-strong hover:underline">
+                                    Editar
+                                </Link>
+                                <button
+                                    type="button"
+                                    class="text-sm text-muted-foreground hover:underline"
+                                    @click="toggleArchive(client)"
+                                >
+                                    {{ client.is_active ? 'Archivar' : 'Restaurar' }}
+                                </button>
+                            </div>
+                        </td>
                     </tr>
                     <tr v-if="clients.data.length === 0">
-                        <td colspan="4" class="px-4 py-8 text-center text-muted-foreground">
+                        <td colspan="5" class="px-4 py-8 text-center text-muted-foreground">
                             No hay clientes con estos filtros.
                         </td>
                     </tr>

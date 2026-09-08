@@ -99,6 +99,7 @@ class OrderController extends Controller
     {
         return Inertia::render('orders/Create', [
             'clients' => Client::query()
+                ->active()
                 ->with('addresses:id,client_id,label,street,neighborhood,city')
                 ->orderBy('name')
                 ->get(['id', 'name', 'phone']),

@@ -21,7 +21,11 @@ class StoreOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'client_id' => ['required', 'integer', 'exists:clients,id'],
+            'client_id' => [
+                'required',
+                'integer',
+                Rule::exists('clients', 'id')->where('is_active', true),
+            ],
             'address_id' => [
                 'required',
                 'integer',
