@@ -2,6 +2,7 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import InputError from '@/components/InputError.vue';
+import Select from '@/components/Select.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -53,15 +54,15 @@ defineOptions({
 });
 
 const form = useForm<{
-    address_id: number | null;
-    courier_id: number | null;
+    address_id: string;
+    courier_id: string;
     shopping_list: string;
     commission: number | null;
     notes: string;
     items: ItemInput[];
 }>({
-    address_id: props.order.address_id,
-    courier_id: props.order.courier_id,
+    address_id: String(props.order.address_id),
+    courier_id: props.order.courier_id ? String(props.order.courier_id) : '',
     shopping_list: props.order.shopping_list,
     commission: props.order.commission ? Number(props.order.commission) : null,
     notes: props.order.notes ?? '',
@@ -111,11 +112,11 @@ const areaClass =
 
                 <div class="grid gap-2">
                     <Label for="address_id">Dirección de entrega</Label>
-                    <select id="address_id" v-model="form.address_id" :class="fieldClass" required>
+                    <Select id="address_id" v-model="form.address_id">
                         <option v-for="address in addresses" :key="address.id" :value="address.id">
                             {{ address.label ? `${address.label} — ` : '' }}{{ address.street }}
                         </option>
-                    </select>
+                    </Select>
                     <InputError :message="form.errors.address_id" />
                 </div>
             </div>
@@ -172,12 +173,12 @@ const areaClass =
 
                 <div class="grid gap-2">
                     <Label for="courier_id">Repartidor</Label>
-                    <select id="courier_id" v-model="form.courier_id" :class="fieldClass">
-                        <option :value="null">Sin asignar</option>
+                    <Select id="courier_id" v-model="form.courier_id">
+                        <option value="">Sin asignar</option>
                         <option v-for="courier in couriers" :key="courier.id" :value="courier.id">
                             {{ courier.name }}
                         </option>
-                    </select>
+                    </Select>
                     <InputError :message="form.errors.courier_id" />
                 </div>
             </div>

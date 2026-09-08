@@ -2,6 +2,7 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import InputError from '@/components/InputError.vue';
+import Select from '@/components/Select.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -49,17 +50,17 @@ defineOptions({
 });
 
 const form = useForm<{
-    client_id: number | null;
-    address_id: number | null;
-    courier_id: number | null;
+    client_id: string;
+    address_id: string;
+    courier_id: string;
     shopping_list: string;
     commission: number | null;
     notes: string;
     items: ItemInput[];
 }>({
-    client_id: null,
-    address_id: null,
-    courier_id: null,
+    client_id: '',
+    address_id: '',
+    courier_id: '',
     shopping_list: '',
     commission: null,
     notes: '',
@@ -73,7 +74,7 @@ const selectedClient = computed<Client | undefined>(() =>
 const addresses = computed<Address[]>(() => selectedClient.value?.addresses ?? []);
 
 function onClientChange(): void {
-    form.address_id = addresses.value.length === 1 ? addresses.value[0].id : null;
+    form.address_id = addresses.value.length === 1 ? String(addresses.value[0].id) : '';
 }
 
 function addItem(): void {
@@ -112,18 +113,12 @@ const areaClass =
             <div class="grid items-start gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
                     <Label for="client_id">Cliente</Label>
-                    <select
-                        id="client_id"
-                        v-model="form.client_id"
-                        :class="fieldClass"
-                        required
-                        @change="onClientChange"
-                    >
-                        <option :value="null" disabled>Selecciona un cliente</option>
+                    <Select id="client_id" v-model="form.client_id" @change="onClientChange">
+                        <option value="" disabled>Selecciona un cliente</option>
                         <option v-for="client in clients" :key="client.id" :value="client.id">
                             {{ client.name }}
                         </option>
-                    </select>
+                    </Select>
                     <InputError :message="form.errors.client_id" />
                     <Link href="/clients/create" class="text-xs text-muted-foreground underline">
                         ¿Cliente nuevo? Regístralo aquí
@@ -132,18 +127,12 @@ const areaClass =
 
                 <div class="grid gap-2">
                     <Label for="address_id">Dirección de entrega</Label>
-                    <select
-                        id="address_id"
-                        v-model="form.address_id"
-                        :class="fieldClass"
-                        required
-                        :disabled="!selectedClient"
-                    >
-                        <option :value="null" disabled>Selecciona una dirección</option>
+                    <Select id="address_id" v-model="form.address_id" :disabled="!selectedClient">
+                        <option value="" disabled>Selecciona una dirección</option>
                         <option v-for="address in addresses" :key="address.id" :value="address.id">
                             {{ address.label ? `${address.label} — ` : '' }}{{ address.street }}
                         </option>
-                    </select>
+                    </Select>
                     <InputError :message="form.errors.address_id" />
                 </div>
             </div>
@@ -205,12 +194,12 @@ const areaClass =
 
                 <div class="grid gap-2">
                     <Label for="courier_id">Repartidor (opcional)</Label>
-                    <select id="courier_id" v-model="form.courier_id" :class="fieldClass">
-                        <option :value="null">Sin asignar</option>
+                    <Select id="courier_id" v-model="form.courier_id">
+                        <option value="">Sin asignar</option>
                         <option v-for="courier in couriers" :key="courier.id" :value="courier.id">
                             {{ courier.name }}
                         </option>
-                    </select>
+                    </Select>
                     <InputError :message="form.errors.courier_id" />
                 </div>
             </div>

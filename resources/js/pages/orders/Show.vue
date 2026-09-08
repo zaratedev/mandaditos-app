@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
+import Select from '@/components/Select.vue';
 import { Button } from '@/components/ui/button';
 import { money, paymentBadgeClass, statusBadgeClass } from '@/lib/format';
 
@@ -55,8 +56,8 @@ defineOptions({
     },
 });
 
-const assignForm = useForm<{ courier_id: number | null }>({
-    courier_id: props.order.courier?.id ?? null,
+const assignForm = useForm<{ courier_id: string }>({
+    courier_id: props.order.courier?.id ? String(props.order.courier.id) : '',
 });
 
 const statusForm = useForm<{ status: string }>({
@@ -189,10 +190,10 @@ function cancelOrder(): void {
                 <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
                     <h2 class="mb-3 text-base font-semibold">Repartidor</h2>
                     <div class="grid gap-2">
-                        <select v-model="assignForm.courier_id" :class="selectClass">
-                            <option :value="null" disabled>Selecciona repartidor</option>
+                        <Select v-model="assignForm.courier_id">
+                            <option value="" disabled>Selecciona repartidor</option>
                             <option v-for="courier in couriers" :key="courier.id" :value="courier.id">{{ courier.name }}</option>
-                        </select>
+                        </Select>
                         <InputError :message="assignForm.errors.courier_id" />
                         <Button size="sm" :disabled="assignForm.processing || !assignForm.courier_id" @click="assign">
                             {{ order.courier ? 'Reasignar' : 'Asignar' }}
@@ -203,9 +204,9 @@ function cancelOrder(): void {
                 <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
                     <h2 class="mb-3 text-base font-semibold">Estado</h2>
                     <div class="grid gap-2">
-                        <select v-model="statusForm.status" :class="selectClass">
+                        <Select v-model="statusForm.status">
                             <option v-for="option in statuses" :key="option.value" :value="option.value">{{ option.label }}</option>
-                        </select>
+                        </Select>
                         <Button size="sm" :disabled="statusForm.processing" @click="changeStatus">Actualizar estado</Button>
                     </div>
                 </div>
@@ -248,10 +249,10 @@ function cancelOrder(): void {
                         Pagado con {{ order.payment_method_label }}<template v-if="order.paid_at"> el {{ order.paid_at }}</template>.
                     </p>
                     <div v-else class="grid gap-2">
-                        <select v-model="paymentForm.payment_method" :class="selectClass">
+                        <Select v-model="paymentForm.payment_method">
                             <option value="" disabled>Método de pago</option>
                             <option v-for="method in paymentMethods" :key="method.value" :value="method.value">{{ method.label }}</option>
-                        </select>
+                        </Select>
                         <InputError :message="paymentForm.errors.payment_method" />
                         <Button size="sm" :disabled="paymentForm.processing || !paymentForm.payment_method" @click="registerPayment">
                             Registrar cobro

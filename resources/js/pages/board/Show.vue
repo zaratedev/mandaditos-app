@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import Select from '@/components/Select.vue';
 import { Button } from '@/components/ui/button';
 import { money, paymentBadgeClass, statusBadgeClass } from '@/lib/format';
 
@@ -42,8 +43,6 @@ const statusForm = useForm<{ status: string }>({
     status: props.order.status,
 });
 
-const selectClass =
-    'w-full rounded-lg border border-sidebar-border/70 bg-transparent px-3 py-2 text-sm dark:border-sidebar-border';
 
 function updateStatus(): void {
     statusForm.post(`/board/${props.order.id}/status`, { preserveScroll: true });
@@ -96,9 +95,9 @@ function updateStatus(): void {
         <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
             <h2 class="mb-3 text-base font-semibold">Actualizar estado</h2>
             <div class="grid gap-2">
-                <select v-model="statusForm.status" :class="selectClass">
+                <Select v-model="statusForm.status">
                     <option v-for="option in statuses" :key="option.value" :value="option.value">{{ option.label }}</option>
-                </select>
+                </Select>
                 <Button :disabled="statusForm.processing" @click="updateStatus">Guardar estado</Button>
             </div>
             <p class="mt-2 text-xs text-muted-foreground">El cobro lo registra el administrador.</p>
