@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -101,6 +102,26 @@ class ReportController extends Controller
                 'revenue' => round((float) $row->revenue, 2),
             ]);
 
+        $topProducts = OrderItem::query()
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->whereBetween('orders.created_at', [$from, $to])
+            ->where('orders.status', '!=', OrderStatus::Cancelled->value)
+            ->selectRaw('order_items.name as name')
+            ->selectRaw('SUM(order_items.quantity) as total_quantity')
+            ->selectRaw('SUM(COALESCE(order_items.line_total, 0)) as total_spent')
+            ->selectRaw('COUNT(DISTINCT order_items.order_id) as orders_count')
+            ->groupBy('order_items.name')
+            ->orderByDesc('total_spent')
+            ->orderByDesc('total_quantity')
+            ->limit(15)
+            ->get()
+            ->map(fn ($row): array => [
+                'name' => $row->name,
+                'quantity' => round((float) $row->total_quantity, 2),
+                'spent' => round((float) $row->total_spent, 2),
+                'orders' => (int) $row->orders_count,
+            ]);
+
         return Inertia::render('reports/Index', [
             'filters' => [
                 'from' => $from->toDateString(),
@@ -111,6 +132,7 @@ class ReportController extends Controller
             'perDay' => $perDay,
             'perCourier' => $perCourier,
             'perMethod' => $perMethod,
+            'topProducts' => $topProducts,
         ]);
     }
 }

@@ -61,3 +61,32 @@ test('couriers cannot view reports', function () {
 
     $this->actingAs($courier)->get('/reports')->assertForbidden();
 });
+
+test('reports include a product breakdown', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $client = Client::factory()->create();
+    $address = Address::factory()->for($client)->create();
+
+    $orderA = Order::factory()->create([
+        'client_id' => $client->id,
+        'address_id' => $address->id,
+        'created_by' => $admin->id,
+    ]);
+    $orderA->items()->create(['name' => 'Tortillas', 'quantity' => 2, 'unit_price' => 25, 'line_total' => 50]);
+    $orderA->items()->create(['name' => 'Leche', 'quantity' => 1, 'unit_price' => 30, 'line_total' => 30]);
+
+    $orderB = Order::factory()->create([
+        'client_id' => $client->id,
+        'address_id' => $address->id,
+        'created_by' => $admin->id,
+    ]);
+    $orderB->items()->create(['name' => 'Tortillas', 'quantity' => 3, 'unit_price' => 25, 'line_total' => 75]);
+
+    $this->actingAs($admin)->get('/reports')
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('reports/Index')
+            ->has('topProducts', 2)
+            ->where('topProducts.0.name', 'Tortillas')
+            ->where('topProducts.0.orders', 2)
+        );
+});

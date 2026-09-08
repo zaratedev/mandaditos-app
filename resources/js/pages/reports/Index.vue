@@ -23,6 +23,13 @@ interface MethodRow {
     revenue: number;
 }
 
+interface ProductRow {
+    name: string;
+    quantity: number;
+    spent: number;
+    orders: number;
+}
+
 const props = defineProps<{
     filters: { from: string; to: string };
     summary: { orders: number; delivered: number; cancelled: number; unpaid: number };
@@ -30,6 +37,7 @@ const props = defineProps<{
     perDay: DayRow[];
     perCourier: CourierRow[];
     perMethod: MethodRow[];
+    topProducts: ProductRow[];
 }>();
 
 defineOptions({
@@ -195,6 +203,34 @@ const inputClass =
                         </tr>
                         <tr v-if="perCourier.length === 0">
                             <td colspan="5" class="py-6 text-center text-muted-foreground">Sin pedidos asignados en el periodo.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Productos más comprados -->
+        <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+            <h2 class="mb-3 text-base font-semibold">Productos más comprados</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-sidebar-border/70 text-left text-muted-foreground dark:border-sidebar-border">
+                            <th class="py-2 pr-4 font-medium">Producto</th>
+                            <th class="py-2 pr-4 text-right font-medium">Cantidad</th>
+                            <th class="py-2 pr-4 text-right font-medium">Veces pedido</th>
+                            <th class="py-2 text-right font-medium">Total gastado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="row in topProducts" :key="row.name" class="border-b border-sidebar-border/40 dark:border-sidebar-border/60">
+                            <td class="py-2 pr-4">{{ row.name }}</td>
+                            <td class="py-2 pr-4 text-right">{{ row.quantity }}</td>
+                            <td class="py-2 pr-4 text-right">{{ row.orders }}</td>
+                            <td class="py-2 text-right">{{ money(row.spent) }}</td>
+                        </tr>
+                        <tr v-if="topProducts.length === 0">
+                            <td colspan="4" class="py-6 text-center text-muted-foreground">Sin productos en el periodo.</td>
                         </tr>
                     </tbody>
                 </table>
