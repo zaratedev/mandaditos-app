@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Support\AppDate;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -22,7 +23,7 @@ class NotificationController extends Controller
                 'message' => $notification->data['message'] ?? '',
                 'url' => $notification->data['url'] ?? null,
                 'read' => $notification->read_at !== null,
-                'created_at' => $notification->created_at?->diffForHumans(),
+                'created_at' => AppDate::dateTime($notification->created_at),
             ]);
 
         return Inertia::render('notifications/Index', [

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Chart, registerables, type TooltipItem } from 'chart.js';
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { money } from '@/lib/format';
+import { money, shortDate, shortDayMonth } from '@/lib/format';
 
 Chart.register(...registerables);
 
@@ -44,7 +44,7 @@ function render(): void {
     chart = new Chart(canvas.value, {
         type: 'bar',
         data: {
-            labels: props.data.map((point) => point.day.slice(5)),
+            labels: props.data.map((point) => shortDayMonth(point.day)),
             datasets: [
                 {
                     label: 'Pedidos',
@@ -66,7 +66,9 @@ function render(): void {
                 tooltip: {
                     callbacks: {
                         title: (items: TooltipItem<'bar'>[]): string =>
-                            props.data[items[0]?.dataIndex ?? 0]?.day ?? '',
+                            shortDate(
+                                props.data[items[0]?.dataIndex ?? 0]?.day,
+                            ),
                         label: (item: TooltipItem<'bar'>): string[] => {
                             const point = props.data[item.dataIndex];
 

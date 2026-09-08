@@ -18,6 +18,7 @@ use App\Models\Order;
 use App\Models\User;
 use App\Notifications\OrderAssigned;
 use App\Notifications\OrderDelivered;
+use App\Support\AppDate;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
@@ -76,7 +77,7 @@ class OrderController extends Controller
                 'total' => $order->total,
                 'payment_status' => $order->payment_status->value,
                 'payment_status_label' => $order->payment_status->label(),
-                'created_at' => $order->created_at?->format('Y-m-d H:i'),
+                'created_at' => AppDate::dateTime($order->created_at),
             ]);
 
         return Inertia::render('orders/Index', [
@@ -178,11 +179,11 @@ class OrderController extends Controller
                     'unit_price' => $item->unit_price,
                     'line_total' => $item->line_total,
                 ]),
-                'created_at' => $order->created_at?->format('Y-m-d H:i'),
-                'confirmed_at' => $order->confirmed_at?->format('Y-m-d H:i'),
-                'purchased_at' => $order->purchased_at?->format('Y-m-d H:i'),
-                'delivered_at' => $order->delivered_at?->format('Y-m-d H:i'),
-                'paid_at' => $order->paid_at?->format('Y-m-d H:i'),
+                'created_at' => AppDate::dateTime($order->created_at),
+                'confirmed_at' => AppDate::dateTime($order->confirmed_at),
+                'purchased_at' => AppDate::dateTime($order->purchased_at),
+                'delivered_at' => AppDate::dateTime($order->delivered_at),
+                'paid_at' => AppDate::dateTime($order->paid_at),
             ],
             'couriers' => $this->assignableCouriers($order->courier_id),
             'statuses' => $this->statusOptions(),

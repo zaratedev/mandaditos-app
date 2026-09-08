@@ -17,6 +17,33 @@ export function money(value: number | string | null | undefined): string {
     return currency.format(amount);
 }
 
+/**
+ * Render a plain Y-m-d value the way the rest of the app writes dates: 08/09/2026.
+ * Split rather than parsed, so a bare Y-m-d is never shifted by the browser timezone.
+ */
+export function shortDate(value: string | null | undefined): string {
+    if (!value) {
+        return '—';
+    }
+
+    const [year, month, day] = value.split('-');
+
+    return year && month && day ? `${day}/${month}/${year}` : value;
+}
+
+/**
+ * The same date without the year, for axis labels where space is tight: 08/09.
+ */
+export function shortDayMonth(value: string | null | undefined): string {
+    if (!value) {
+        return '';
+    }
+
+    const [, month, day] = value.split('-');
+
+    return month && day ? `${day}/${month}` : value;
+}
+
 export function statusBadgeClass(status: string): string {
     const map: Record<string, string> = {
         requested: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',

@@ -9,6 +9,7 @@ use App\Enums\UserRole;
 use App\Models\Order;
 use App\Models\User;
 use App\Notifications\OrderDelivered;
+use App\Support\AppDate;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
@@ -42,7 +43,7 @@ class CourierBoardController extends Controller
                 'status_label' => $order->status->label(),
                 'payment_status' => $order->payment_status->value,
                 'total' => $order->total,
-                'created_at' => $order->created_at?->format('Y-m-d H:i'),
+                'created_at' => AppDate::dateTime($order->created_at),
             ]);
 
         return Inertia::render('board/Index', [

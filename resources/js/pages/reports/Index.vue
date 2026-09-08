@@ -2,7 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import Datepicker from '@/components/Datepicker.vue';
-import { money } from '@/lib/format';
+import { money, shortDate } from '@/lib/format';
 
 interface DayRow {
     day: string;
@@ -139,7 +139,7 @@ const maxDayOrders = computed<number>(() =>
                 </div>
                 <ul v-else class="space-y-2">
                     <li v-for="day in perDay" :key="day.day" class="flex items-center gap-3 text-sm">
-                        <span class="w-24 shrink-0 text-muted-foreground">{{ day.day }}</span>
+                        <span class="w-24 shrink-0 text-muted-foreground">{{ shortDate(day.day) }}</span>
                         <span class="flex-1">
                             <span
                                 class="inline-block h-3 rounded bg-primary/70"
