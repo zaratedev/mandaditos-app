@@ -5,6 +5,7 @@ use App\Http\Controllers\CourierBoardController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
@@ -23,6 +24,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('notifications/{id}/read', [NotificationController::class, 'read'])->name('notifications.read');
 
     Route::middleware('admin')->group(function () {
+        Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('orders/create', [OrderController::class, 'create'])->name('orders.create');
         Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
