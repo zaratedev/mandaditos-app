@@ -30,7 +30,13 @@ function render(): void {
     chart?.destroy();
 
     const dark = isDark();
-    const barColor = dark ? '#3987e5' : '#2a78d6';
+    // The bars carry the data, so they have to stay legible against the card. The
+    // brand yellow is bright enough to almost disappear on white (1.4:1), so in light
+    // mode it gets a darker amber outline that reads at 3.5:1; on the dark card the
+    // fill alone is already at 14:1 and needs no help.
+    const barColor = '#fed61c';
+    const barBorder = dark ? 'transparent' : '#a38600';
+    const barBorderWidth = dark ? 0 : 1;
     const muted = '#898781';
     const grid = dark ? 'rgba(255,255,255,0.08)' : 'rgba(11,11,11,0.06)';
 
@@ -43,6 +49,9 @@ function render(): void {
                     label: 'Pedidos',
                     data: props.data.map((point) => point.count),
                     backgroundColor: barColor,
+                    borderColor: barBorder,
+                    borderWidth: barBorderWidth,
+                    borderSkipped: false,
                     borderRadius: 4,
                     maxBarThickness: 22,
                 },

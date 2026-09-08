@@ -210,7 +210,7 @@ const fieldClass =
                             <div class="flex items-center justify-end gap-3">
                                 <Link
                                     :href="`/couriers/${courier.id}/edit`"
-                                    class="text-primary text-sm hover:underline"
+                                    class="text-primary-strong text-sm hover:underline"
                                 >
                                     Editar
                                 </Link>

@@ -175,7 +175,7 @@ function nextMonth(): void {
                         isSameDay(day, selected)
                             ? 'bg-primary text-primary-foreground hover:bg-primary hover:opacity-90'
                             : '',
-                        isToday(day) && !isSameDay(day, selected) ? 'font-semibold text-primary' : '',
+                        isToday(day) && !isSameDay(day, selected) ? 'font-semibold text-primary-strong' : '',
                     ]"
                     @click="selectDay(day)"
                 >

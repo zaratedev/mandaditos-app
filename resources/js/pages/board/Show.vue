@@ -67,7 +67,7 @@ function updateStatus(): void {
 
         <div class="rounded-xl border border-sidebar-border/70 p-4 text-sm dark:border-sidebar-border">
             <p class="font-medium">{{ order.client.name }}</p>
-            <a v-if="order.client.phone" :href="`tel:${order.client.phone}`" class="text-primary underline">
+            <a v-if="order.client.phone" :href="`tel:${order.client.phone}`" class="text-primary-strong underline">
                 {{ order.client.phone }}
             </a>
             <p class="mt-2 text-muted-foreground">
