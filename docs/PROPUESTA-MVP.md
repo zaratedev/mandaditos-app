@@ -1,7 +1,7 @@
 # Mandaditos app — Propuesta y Documento de Descubrimiento (MVP)
 
-> Documento base del proyecto. **Fase 1 (MVP) completada.** En curso: **Fase 2** (notificaciones, reportes, mejoras de desglose).
-> Fecha: 2026-09-08 · Autor: equipo técnico (Sandslash) · Estado: **Fase 1 completada — Fase 2 en progreso**
+> Documento base del proyecto. **Fases 1 y 2 completadas.** Siguiente: **Fase 3** (integración WhatsApp, portal de cliente).
+> Fecha: 2026-09-08 · Autor: equipo técnico (Sandslash) · Estado: **Fases 1 y 2 completadas**
 >
 > **Convención dura del proyecto:** toda la **arquitectura y el código en inglés**
 > (tablas, columnas, modelos, enums, rutas, variables). La **prosa y la UI** pueden
@@ -288,7 +288,7 @@ Enums de PHP); sin sobre-ingeniería (nada de repos/DTOs/eventos salvo necesidad
 |---|---|---|
 | **Fase 0** | Documento + acuerdo de alcance | ✅ **Completada** |
 | **Fase 1 (MVP)** | Scaffolding, auth+roles, clients, couriers, orders + ciclo de vida, corte, editar/cancelar, español/MX | ✅ **Completada** |
-| **Fase 2** | Notificaciones, reportes, mejoras de desglose | 🔄 **En progreso** |
+| **Fase 2** | Notificaciones, reportes, mejoras de desglose | ✅ **Completada** |
 | **Fase 3** | Integración WhatsApp, portal de cliente | Pendiente |
 | **Fase 4** | Multi-negocio / SaaS | Pendiente |
 
@@ -332,13 +332,16 @@ productos, asignación, registro de compra/comisión/cobro, panel del courier, d
 con corte del día, editar/cancelar pedido, toasts, y app en español con zona horaria de
 México. 58 pruebas en verde.
 
-**Fase 2 — 🔄 en progreso.** Tres frentes:
+**Fase 2 — ✅ completada.** Tres frentes entregados:
 
-1. **Notificaciones (en curso).** Avisos in-app (base de datos) para el equipo: al
-   asignar un pedido se notifica al repartidor; al marcarse *entregado* se notifica a
-   los administradores. Campana con contador en el encabezado y bandeja de
-   notificaciones. (Canales externos como WhatsApp/email quedan para la Fase 3.)
+1. **Notificaciones.** Avisos in-app (base de datos): al asignar un pedido se notifica
+   al repartidor; al marcarse *entregado* se notifica a los administradores. Campana con
+   contador en el encabezado y bandeja de notificaciones. (Canales externos como
+   WhatsApp/email quedan para la Fase 3.)
 2. **Reportes.** Panel de reportes para el admin con rango de fechas: ventas y
-   comisiones, pedidos por día, desempeño por repartidor y por método de pago.
-3. **Mejoras de desglose.** Mejor captura y visualización de los productos del pedido
-   (precios por línea, subtotal automático) y desglose por producto en los reportes.
+   comisiones, pedidos por día, desempeño por repartidor, por método de pago y
+   **productos más comprados**. Además: gráficas (Chart.js) en el dashboard y filtros
+   avanzados en los listados de pedidos y clientes.
+3. **Mejoras de desglose.** El subtotal se deriva automáticamente de los productos con
+   precio; edición de líneas de producto en crear/editar pedido; y desglose por producto
+   en los reportes.
