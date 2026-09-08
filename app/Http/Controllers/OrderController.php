@@ -16,10 +16,13 @@ use App\Http\Requests\UpdateOrderRequest;
 use App\Models\Client;
 use App\Models\Order;
 use App\Models\User;
+use App\Notifications\OrderAssigned;
+use App\Notifications\OrderDelivered;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -100,6 +103,10 @@ class OrderController extends Controller
 
             return $order;
         });
+
+        if ($order->courier_id !== null) {
+            User::find($order->courier_id)?->notify(new OrderAssigned($order));
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Order created.')]);
 
@@ -231,6 +238,8 @@ class OrderController extends Controller
         $order->confirmed_at ??= now();
         $order->save();
 
+        User::find($order->courier_id)?->notify(new OrderAssigned($order));
+
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Courier assigned.')]);
 
         return back();
@@ -243,6 +252,7 @@ class OrderController extends Controller
         ]);
 
         $status = OrderStatus::from($validated['status']);
+        $wasDelivered = $order->status === OrderStatus::Delivered;
         $order->status = $status;
 
         match ($status) {
@@ -253,6 +263,13 @@ class OrderController extends Controller
         };
 
         $order->save();
+
+        if ($status === OrderStatus::Delivered && ! $wasDelivered) {
+            Notification::send(
+                User::where('role', UserRole::Admin->value)->get(),
+                new OrderDelivered($order),
+            );
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Status updated.')]);
 

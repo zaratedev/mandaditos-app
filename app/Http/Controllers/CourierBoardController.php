@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\OrderStatus;
+use App\Enums\UserRole;
 use App\Models\Order;
+use App\Models\User;
+use App\Notifications\OrderDelivered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -83,6 +87,7 @@ class CourierBoardController extends Controller
         ]);
 
         $status = OrderStatus::from($validated['status']);
+        $wasDelivered = $order->status === OrderStatus::Delivered;
         $order->status = $status;
 
         match ($status) {
@@ -92,6 +97,13 @@ class CourierBoardController extends Controller
         };
 
         $order->save();
+
+        if ($status === OrderStatus::Delivered && ! $wasDelivered) {
+            Notification::send(
+                User::where('role', UserRole::Admin->value)->get(),
+                new OrderDelivered($order),
+            );
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Status updated.')]);
 

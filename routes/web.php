@@ -3,6 +3,7 @@
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CourierBoardController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController;
 use Illuminate\Support\Facades\Route;
 
@@ -16,6 +17,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('can:view,order')->name('board.show');
     Route::post('board/{order}/status', [CourierBoardController::class, 'advanceStatus'])
         ->middleware('can:update,order')->name('board.status');
+
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
+    Route::post('notifications/{id}/read', [NotificationController::class, 'read'])->name('notifications.read');
 
     Route::middleware('admin')->group(function () {
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
