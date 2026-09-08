@@ -96,8 +96,10 @@ function submit(): void {
     form.post('/orders');
 }
 
-const selectClass =
-    'rounded-lg border border-sidebar-border/70 bg-transparent px-3 py-2 text-sm dark:border-sidebar-border';
+const fieldClass =
+    'h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50';
+const areaClass =
+    'w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50';
 </script>
 
 <template>
@@ -107,13 +109,13 @@ const selectClass =
         <h1 class="text-xl font-semibold">Nuevo pedido</h1>
 
         <form class="space-y-6" @submit.prevent="submit">
-            <div class="grid gap-4 sm:grid-cols-2">
+            <div class="grid items-start gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
                     <Label for="client_id">Cliente</Label>
                     <select
                         id="client_id"
                         v-model="form.client_id"
-                        :class="selectClass"
+                        :class="fieldClass"
                         required
                         @change="onClientChange"
                     >
@@ -133,7 +135,7 @@ const selectClass =
                     <select
                         id="address_id"
                         v-model="form.address_id"
-                        :class="selectClass"
+                        :class="fieldClass"
                         required
                         :disabled="!selectedClient"
                     >
@@ -152,7 +154,7 @@ const selectClass =
                     id="shopping_list"
                     v-model="form.shopping_list"
                     rows="4"
-                    :class="selectClass"
+                    :class="areaClass"
                     placeholder="1 kg de tortillas, 2 litros de leche, ..."
                     required
                 ></textarea>
@@ -178,11 +180,11 @@ const selectClass =
                     </div>
                     <div class="col-span-2 grid gap-1">
                         <Label :for="`item-qty-${index}`" class="text-xs">Cant.</Label>
-                        <input :id="`item-qty-${index}`" v-model.number="item.quantity" type="number" min="0.01" step="0.01" class="w-full" :class="selectClass" />
+                        <input :id="`item-qty-${index}`" v-model.number="item.quantity" type="number" min="0.01" step="0.01" :class="fieldClass" />
                     </div>
                     <div class="col-span-3 grid gap-1">
                         <Label :for="`item-price-${index}`" class="text-xs">Precio</Label>
-                        <input :id="`item-price-${index}`" v-model.number="item.unit_price" type="number" min="0" step="0.01" class="w-full" :class="selectClass" />
+                        <input :id="`item-price-${index}`" v-model.number="item.unit_price" type="number" min="0" step="0.01" :class="fieldClass" />
                     </div>
                     <div class="col-span-1">
                         <Button type="button" variant="ghost" size="sm" @click="removeItem(index)">✕</Button>
@@ -194,16 +196,16 @@ const selectClass =
                 </p>
             </div>
 
-            <div class="grid gap-4 sm:grid-cols-2">
+            <div class="grid items-start gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
                     <Label for="commission">Comisión</Label>
-                    <input id="commission" v-model.number="form.commission" type="number" min="0" step="0.01" placeholder="0.00" class="w-full" :class="selectClass" />
+                    <input id="commission" v-model.number="form.commission" type="number" min="0" step="0.01" placeholder="0.00" :class="fieldClass" />
                     <InputError :message="form.errors.commission" />
                 </div>
 
                 <div class="grid gap-2">
                     <Label for="courier_id">Repartidor (opcional)</Label>
-                    <select id="courier_id" v-model="form.courier_id" :class="selectClass">
+                    <select id="courier_id" v-model="form.courier_id" :class="fieldClass">
                         <option :value="null">Sin asignar</option>
                         <option v-for="courier in couriers" :key="courier.id" :value="courier.id">
                             {{ courier.name }}
@@ -215,7 +217,7 @@ const selectClass =
 
             <div class="grid gap-2">
                 <Label for="notes">Notas (opcional)</Label>
-                <textarea id="notes" v-model="form.notes" rows="2" :class="selectClass"></textarea>
+                <textarea id="notes" v-model="form.notes" rows="2" :class="areaClass"></textarea>
                 <InputError :message="form.errors.notes" />
             </div>
 
