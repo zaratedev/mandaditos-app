@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
+import Datepicker from '@/components/Datepicker.vue';
 import { money } from '@/lib/format';
 
 interface DayRow {
@@ -60,9 +61,6 @@ function apply(): void {
 const maxDayOrders = computed<number>(() =>
     Math.max(1, ...props.perDay.map((day) => day.orders)),
 );
-
-const inputClass =
-    'rounded-lg border border-sidebar-border/70 bg-transparent px-3 py-2 text-sm dark:border-sidebar-border';
 </script>
 
 <template>
@@ -73,12 +71,12 @@ const inputClass =
             <h1 class="text-xl font-semibold">Reportes</h1>
             <form class="flex flex-wrap items-end gap-2" @submit.prevent="apply">
                 <div class="grid gap-1">
-                    <label for="from" class="text-xs text-muted-foreground">Desde</label>
-                    <input id="from" v-model="from" type="date" :class="inputClass" />
+                    <label class="text-xs text-muted-foreground">Desde</label>
+                    <Datepicker v-model="from" placeholder="Desde" />
                 </div>
                 <div class="grid gap-1">
-                    <label for="to" class="text-xs text-muted-foreground">Hasta</label>
-                    <input id="to" v-model="to" type="date" :class="inputClass" />
+                    <label class="text-xs text-muted-foreground">Hasta</label>
+                    <Datepicker v-model="to" placeholder="Hasta" />
                 </div>
                 <button
                     type="submit"

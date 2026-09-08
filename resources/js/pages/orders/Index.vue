@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { reactive } from 'vue';
+import Datepicker from '@/components/Datepicker.vue';
+import Select from '@/components/Select.vue';
 import { money, paymentBadgeClass, statusBadgeClass } from '@/lib/format';
 
 interface OrderRow {
@@ -81,9 +83,6 @@ function clear(): void {
 
     router.get('/orders', {}, { preserveState: true, replace: true });
 }
-
-const selectClass =
-    'w-full rounded-lg border border-sidebar-border/70 bg-transparent px-3 py-2 text-sm dark:border-sidebar-border';
 </script>
 
 <template>
@@ -104,69 +103,69 @@ const selectClass =
             class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
             @submit.prevent="apply"
         >
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div class="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 <div class="grid gap-1">
                     <label for="f-status" class="text-xs text-muted-foreground">Estado</label>
-                    <select id="f-status" v-model="form.status" :class="selectClass">
+                    <Select id="f-status" v-model="form.status">
                         <option value="">Todos</option>
                         <option v-for="option in statuses" :key="option.value" :value="option.value">
                             {{ option.label }}
                         </option>
-                    </select>
+                    </Select>
                 </div>
 
                 <div class="grid gap-1">
                     <label for="f-courier" class="text-xs text-muted-foreground">Repartidor</label>
-                    <select id="f-courier" v-model="form.courier_id" :class="selectClass">
+                    <Select id="f-courier" v-model="form.courier_id">
                         <option value="">Todos</option>
                         <option value="unassigned">Sin asignar</option>
                         <option v-for="courier in couriers" :key="courier.id" :value="String(courier.id)">
                             {{ courier.name }}
                         </option>
-                    </select>
+                    </Select>
                 </div>
 
                 <div class="grid gap-1">
                     <label for="f-client" class="text-xs text-muted-foreground">Cliente</label>
-                    <select id="f-client" v-model="form.client_id" :class="selectClass">
+                    <Select id="f-client" v-model="form.client_id">
                         <option value="">Todos</option>
                         <option v-for="client in clients" :key="client.id" :value="String(client.id)">
                             {{ client.name }}
                         </option>
-                    </select>
+                    </Select>
                 </div>
 
                 <div class="grid gap-1">
                     <label for="f-pay-status" class="text-xs text-muted-foreground">Pago</label>
-                    <select id="f-pay-status" v-model="form.payment_status" :class="selectClass">
+                    <Select id="f-pay-status" v-model="form.payment_status">
                         <option value="">Todos</option>
                         <option v-for="option in paymentStatuses" :key="option.value" :value="option.value">
                             {{ option.label }}
                         </option>
-                    </select>
+                    </Select>
                 </div>
 
                 <div class="grid gap-1">
                     <label for="f-pay-method" class="text-xs text-muted-foreground">Método de pago</label>
-                    <select id="f-pay-method" v-model="form.payment_method" :class="selectClass">
+                    <Select id="f-pay-method" v-model="form.payment_method">
                         <option value="">Todos</option>
                         <option v-for="option in paymentMethods" :key="option.value" :value="option.value">
                             {{ option.label }}
                         </option>
-                    </select>
+                    </Select>
                 </div>
 
                 <div class="grid gap-1">
-                    <label for="f-from" class="text-xs text-muted-foreground">Desde</label>
-                    <input id="f-from" v-model="form.from" type="date" :class="selectClass" />
+                    <label class="text-xs text-muted-foreground">Desde</label>
+                    <Datepicker v-model="form.from" placeholder="Desde" />
                 </div>
 
                 <div class="grid gap-1">
-                    <label for="f-to" class="text-xs text-muted-foreground">Hasta</label>
-                    <input id="f-to" v-model="form.to" type="date" :class="selectClass" />
+                    <label class="text-xs text-muted-foreground">Hasta</label>
+                    <Datepicker v-model="form.to" placeholder="Hasta" />
                 </div>
 
-                <div class="flex items-end gap-2">
+                <div class="flex items-center gap-2">
                     <button
                         type="submit"
                         class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"

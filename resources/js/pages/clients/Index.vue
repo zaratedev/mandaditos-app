@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { reactive } from 'vue';
+import Select from '@/components/Select.vue';
 
 interface ClientRow {
     id: number;
@@ -97,19 +98,19 @@ const fieldClass =
 
                 <div class="grid gap-1">
                     <label for="f-has-orders" class="text-xs text-muted-foreground">Pedidos</label>
-                    <select id="f-has-orders" v-model="form.has_orders" :class="fieldClass">
+                    <Select id="f-has-orders" v-model="form.has_orders">
                         <option value="">Todos</option>
                         <option value="with">Con pedidos</option>
                         <option value="without">Sin pedidos</option>
-                    </select>
+                    </Select>
                 </div>
 
                 <div class="grid gap-1">
                     <label for="f-sort" class="text-xs text-muted-foreground">Ordenar por</label>
-                    <select id="f-sort" v-model="form.sort" :class="fieldClass">
+                    <Select id="f-sort" v-model="form.sort">
                         <option value="">Nombre</option>
                         <option value="orders">Más pedidos</option>
-                    </select>
+                    </Select>
                 </div>
 
                 <div class="flex items-center gap-2 sm:col-span-2 lg:col-span-4">
