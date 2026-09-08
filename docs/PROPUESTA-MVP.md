@@ -1,7 +1,7 @@
 # Mandaditos app — Propuesta y Documento de Descubrimiento (MVP)
 
-> Documento base del proyecto. **Fase 0 completada** (alcance acordado).
-> Fecha: 2026-09-07 · Autor: equipo técnico (Sandslash) · Estado: **APROBADO — decisiones confirmadas**
+> Documento base del proyecto. **Fase 1 (MVP) completada.** En curso: **Fase 2** (notificaciones, reportes, mejoras de desglose).
+> Fecha: 2026-09-08 · Autor: equipo técnico (Sandslash) · Estado: **Fase 1 completada — Fase 2 en progreso**
 >
 > **Convención dura del proyecto:** toda la **arquitectura y el código en inglés**
 > (tablas, columnas, modelos, enums, rutas, variables). La **prosa y la UI** pueden
@@ -287,8 +287,8 @@ Enums de PHP); sin sobre-ingeniería (nada de repos/DTOs/eventos salvo necesidad
 | Fase | Contenido | Estado |
 |---|---|---|
 | **Fase 0** | Documento + acuerdo de alcance | ✅ **Completada** |
-| **Fase 1 (MVP)** | Scaffolding, auth+roles, clients, couriers, orders + ciclo de vida, corte | ⏭️ **Siguiente** |
-| **Fase 2** | Notificaciones, reportes, mejoras de desglose | Pendiente |
+| **Fase 1 (MVP)** | Scaffolding, auth+roles, clients, couriers, orders + ciclo de vida, corte, editar/cancelar, español/MX | ✅ **Completada** |
+| **Fase 2** | Notificaciones, reportes, mejoras de desglose | 🔄 **En progreso** |
 | **Fase 3** | Integración WhatsApp, portal de cliente | Pendiente |
 | **Fase 4** | Multi-negocio / SaaS | Pendiente |
 
@@ -321,3 +321,24 @@ Entorno verificado: PHP 8.4.23 · Composer 2.10.2 · Node 24 · npm 11 · Larave
 > **Pendiente menor para arrancar Fase 1:** confirmar credenciales locales de MySQL
 > (usuario/contraseña) o si uso el default `root` sin contraseña; y nombre de la DB
 > (propongo `mandaditos`).
+
+---
+
+## 16. Fase 2 — alcance y estado
+
+**Fase 1 (MVP) — ✅ completada.** Scaffolding Laravel 13 + Inertia/Vue, auth y roles
+(admin/courier), clientes y direcciones, pedidos con ciclo de vida y desglose de
+productos, asignación, registro de compra/comisión/cobro, panel del courier, dashboard
+con corte del día, editar/cancelar pedido, toasts, y app en español con zona horaria de
+México. 58 pruebas en verde.
+
+**Fase 2 — 🔄 en progreso.** Tres frentes:
+
+1. **Notificaciones (en curso).** Avisos in-app (base de datos) para el equipo: al
+   asignar un pedido se notifica al repartidor; al marcarse *entregado* se notifica a
+   los administradores. Campana con contador en el encabezado y bandeja de
+   notificaciones. (Canales externos como WhatsApp/email quedan para la Fase 3.)
+2. **Reportes.** Panel de reportes para el admin con rango de fechas: ventas y
+   comisiones, pedidos por día, desempeño por repartidor y por método de pago.
+3. **Mejoras de desglose.** Mejor captura y visualización de los productos del pedido
+   (precios por línea, subtotal automático) y desglose por producto en los reportes.
