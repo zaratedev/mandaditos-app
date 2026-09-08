@@ -7,14 +7,34 @@ namespace App\Models;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
+use Carbon\CarbonImmutable;
+use Database\Factories\OrderFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property int $client_id
+ * @property int $address_id
+ * @property int|null $courier_id
+ * @property OrderStatus $status
+ * @property string $shopping_list
+ * @property PaymentMethod|null $payment_method
+ * @property PaymentStatus $payment_status
+ * @property string|null $notes
+ * @property int $created_by
+ * @property CarbonImmutable|null $confirmed_at
+ * @property CarbonImmutable|null $purchased_at
+ * @property CarbonImmutable|null $delivered_at
+ * @property CarbonImmutable|null $paid_at
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ */
 class Order extends Model
 {
-    /** @use HasFactory<\Database\Factories\OrderFactory> */
+    /** @use HasFactory<OrderFactory> */
     use HasFactory;
 
     protected $fillable = [

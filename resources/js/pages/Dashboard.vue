@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import DailyOrdersChart from '@/components/charts/DailyOrdersChart.vue';
 import StatusBars from '@/components/charts/StatusBars.vue';
 import { money } from '@/lib/format';
@@ -25,6 +25,15 @@ interface CorteRow {
     orders: number;
 }
 
+interface NextOrder {
+    id: number;
+    client: string | null;
+    status_label: string;
+    address: string;
+    next_status: string | null;
+    next_label: string | null;
+}
+
 defineProps<{
     isAdmin: boolean;
     stats?: { today: number; open: number; deliveredToday: number; unpaidDelivered: number };
@@ -33,6 +42,11 @@ defineProps<{
     corte?: CorteRow[];
     corteTotals?: { cash: number; transfer: number; total: number; commission: number };
     courierOpenOrders?: number;
+    nextOrder?: NextOrder | null;
+    buckets?: { to_buy: number; buying: number; to_deliver: number };
+    deliveredToday?: number;
+    cashCollectedToday?: number;
+    awaitingPayment?: number;
 }>();
 
 defineOptions({
@@ -40,6 +54,10 @@ defineOptions({
         breadcrumbs: [{ title: 'Panel', href: '/dashboard' }],
     },
 });
+
+function advance(orderId: number, status: string): void {
+    router.post(`/board/${orderId}/status`, { status }, { preserveScroll: true });
+}
 </script>
 
 <template>
@@ -148,16 +166,69 @@ defineOptions({
         </template>
 
         <template v-else>
-            <div class="rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border">
-                <p class="text-sm text-muted-foreground">Tus pedidos asignados abiertos</p>
-                <p class="mt-1 text-4xl font-semibold">{{ courierOpenOrders ?? 0 }}</p>
-                <Link
-                    href="/board"
-                    class="mt-4 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-                >
-                    Ver mis pedidos
+            <section v-if="nextOrder" class="rounded-xl border border-sidebar-border/70 p-5 dark:border-sidebar-border">
+                <p class="text-sm text-muted-foreground">Lo que sigue</p>
+                <p class="mt-1 text-2xl font-semibold">{{ nextOrder.client ?? 'Sin cliente' }}</p>
+                <p class="text-sm text-muted-foreground">Pedido #{{ nextOrder.id }} · {{ nextOrder.status_label }}</p>
+                <p v-if="nextOrder.address" class="mt-2 text-sm">{{ nextOrder.address }}</p>
+
+                <div class="mt-4 flex flex-wrap items-center gap-3">
+                    <button
+                        v-if="nextOrder.next_status"
+                        type="button"
+                        class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+                        @click="advance(nextOrder.id, nextOrder.next_status)"
+                    >
+                        {{ nextOrder.next_label }}
+                    </button>
+                    <Link
+                        :href="`/board/${nextOrder.id}`"
+                        class="rounded-lg border border-sidebar-border/70 px-4 py-2 text-sm font-medium hover:bg-muted dark:border-sidebar-border"
+                    >
+                        Ver el pedido
+                    </Link>
+                </div>
+            </section>
+
+            <section v-else class="rounded-xl border border-sidebar-border/70 p-6 text-center dark:border-sidebar-border">
+                <p class="text-lg font-medium">No tienes pedidos pendientes</p>
+                <p class="mt-1 text-sm text-muted-foreground">
+                    Cuando el administrador te asigne uno, aparecerá aquí.
+                </p>
+            </section>
+
+            <div class="grid gap-3 sm:grid-cols-3">
+                <Link href="/board" class="rounded-xl border border-sidebar-border/70 p-4 hover:bg-muted dark:border-sidebar-border">
+                    <p class="text-sm text-muted-foreground">Por comprar</p>
+                    <p class="mt-1 text-3xl font-semibold">{{ buckets?.to_buy ?? 0 }}</p>
+                </Link>
+                <Link href="/board" class="rounded-xl border border-sidebar-border/70 p-4 hover:bg-muted dark:border-sidebar-border">
+                    <p class="text-sm text-muted-foreground">Comprando</p>
+                    <p class="mt-1 text-3xl font-semibold">{{ buckets?.buying ?? 0 }}</p>
+                </Link>
+                <Link href="/board" class="rounded-xl border border-sidebar-border/70 p-4 hover:bg-muted dark:border-sidebar-border">
+                    <p class="text-sm text-muted-foreground">Por entregar</p>
+                    <p class="mt-1 text-3xl font-semibold">{{ buckets?.to_deliver ?? 0 }}</p>
                 </Link>
             </div>
+
+            <div class="grid gap-3 sm:grid-cols-2">
+                <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+                    <p class="text-sm text-muted-foreground">Entregados hoy</p>
+                    <p class="mt-1 text-3xl font-semibold">{{ deliveredToday ?? 0 }}</p>
+                </div>
+                <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+                    <p class="text-sm text-muted-foreground">Efectivo cobrado hoy</p>
+                    <p class="mt-1 text-3xl font-semibold">{{ money(cashCollectedToday) }}</p>
+                    <p class="mt-1 text-xs text-muted-foreground">
+                        Según lo que el administrador ya registró como cobrado.
+                    </p>
+                </div>
+            </div>
+
+            <p v-if="(awaitingPayment ?? 0) > 0" class="text-sm text-muted-foreground">
+                Tienes {{ awaitingPayment }} entrega(s) sin cobro registrado todavía.
+            </p>
         </template>
     </div>
 </template>
