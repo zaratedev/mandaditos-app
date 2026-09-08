@@ -41,9 +41,9 @@ test('storing a push subscription requires authentication', function () {
 });
 
 test('order notifications are delivered via the web push channel', function () {
-    $notification = new OrderAssigned(new Order());
+    $notification = new OrderAssigned(new Order);
 
-    expect($notification->via(new User()))
+    expect($notification->via(new User))
         ->toContain('database')
         ->toContain(WebPushChannel::class);
 });

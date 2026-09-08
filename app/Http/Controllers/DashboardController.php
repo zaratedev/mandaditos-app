@@ -15,6 +15,9 @@ use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * @phpstan-type CashCutRow array{courier: string, cash: float, transfer: float, total: float, commission: float, orders: int<0, max>}
+ */
 class DashboardController extends Controller
 {
     /**
@@ -75,6 +78,7 @@ class DashboardController extends Controller
             ->selectRaw('COUNT(*) as orders_count')
             ->selectRaw("SUM(CASE WHEN payment_status = 'paid' THEN total ELSE 0 END) as revenue")
             ->groupBy('day')
+            ->toBase()
             ->get()
             ->keyBy('day');
 
@@ -196,7 +200,7 @@ class DashboardController extends Controller
     /**
      * Build the daily cash cut: money collected today grouped by courier.
      *
-     * @return array{0: Collection<int, array<string, mixed>>, 1: array<string, float>}
+     * @return array{0: Collection<int, CashCutRow>, 1: array<string, float>}
      */
     private function dailyCashCut(CarbonInterface $day): array
     {
@@ -207,8 +211,8 @@ class DashboardController extends Controller
             ->get(['id', 'courier_id', 'payment_method', 'total', 'commission']);
 
         $corte = $paid
-            ->groupBy(fn (Order $order): string => $order->courier?->name ?? 'Sin asignar')
-            ->map(function (Collection $orders, string $courier): array {
+            ->groupBy(fn (Order $order): string => $order->courier->name ?? 'Sin asignar')
+            ->map(/** @return CashCutRow */ function (Collection $orders, string $courier): array {
                 $cash = $orders->filter(fn (Order $o): bool => $o->payment_method === PaymentMethod::Cash)
                     ->sum(fn (Order $o): float => (float) $o->total);
                 $transfer = $orders->filter(fn (Order $o): bool => $o->payment_method === PaymentMethod::Transfer)

@@ -29,7 +29,9 @@ class OrderFactory extends Factory
             'address_id' => Address::factory(),
             'courier_id' => null,
             'status' => OrderStatus::Requested,
-            'shopping_list' => implode("\n", fake()->words(4)),
+            'shopping_list' => collect(range(1, 4))
+                ->map(fn (): string => fake()->word())
+                ->implode("\n"),
             'items_subtotal' => null,
             'commission' => null,
             'total' => null,

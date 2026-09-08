@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -60,8 +61,9 @@ class ReportController extends Controller
             ->selectRaw("SUM(CASE WHEN payment_status = 'paid' THEN total ELSE 0 END) as revenue")
             ->groupBy('day')
             ->orderBy('day')
+            ->toBase()
             ->get()
-            ->map(fn ($row): array => [
+            ->map(fn (object $row): array => [
                 'day' => $row->day,
                 'orders' => (int) $row->orders_count,
                 'revenue' => round((float) $row->revenue, 2),
@@ -75,12 +77,13 @@ class ReportController extends Controller
             ->selectRaw("SUM(CASE WHEN payment_status = 'paid' THEN total ELSE 0 END) as revenue")
             ->selectRaw("SUM(CASE WHEN payment_status = 'paid' THEN commission ELSE 0 END) as commission")
             ->groupBy('courier_id')
+            ->toBase()
             ->get();
 
         $courierNames = User::whereIn('id', $courierRows->pluck('courier_id'))->pluck('name', 'id');
 
         $perCourier = $courierRows
-            ->map(fn ($row): array => [
+            ->map(fn (object $row): array => [
                 'courier' => $courierNames[$row->courier_id] ?? 'N/D',
                 'orders' => (int) $row->orders_count,
                 'delivered' => (int) $row->delivered_count,
@@ -95,9 +98,10 @@ class ReportController extends Controller
             ->selectRaw('COUNT(*) as orders_count')
             ->selectRaw('SUM(total) as revenue')
             ->groupBy('payment_method')
+            ->toBase()
             ->get()
-            ->map(fn ($row): array => [
-                'method' => $row->payment_method?->label() ?? 'N/D',
+            ->map(fn (object $row): array => [
+                'method' => PaymentMethod::tryFrom((string) $row->payment_method)?->label() ?? 'N/D',
                 'orders' => (int) $row->orders_count,
                 'revenue' => round((float) $row->revenue, 2),
             ]);
@@ -114,8 +118,9 @@ class ReportController extends Controller
             ->orderByDesc('total_spent')
             ->orderByDesc('total_quantity')
             ->limit(15)
+            ->toBase()
             ->get()
-            ->map(fn ($row): array => [
+            ->map(fn (object $row): array => [
                 'name' => $row->name,
                 'quantity' => round((float) $row->total_quantity, 2),
                 'spent' => round((float) $row->total_spent, 2),

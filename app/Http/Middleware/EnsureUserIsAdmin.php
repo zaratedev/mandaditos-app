@@ -13,7 +13,7 @@ class EnsureUserIsAdmin
     /**
      * Allow the request only when the authenticated user is an admin.
      *
-     * @param  \Closure(Request): (Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {

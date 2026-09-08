@@ -36,7 +36,7 @@ class OrderAssigned extends Notification
 
     public function toWebPush(object $notifiable, mixed $notification): WebPushMessage
     {
-        return (new WebPushMessage())
+        return (new WebPushMessage)
             ->title('Nuevo pedido asignado')
             ->body("Se te asignó el pedido #{$this->order->id}.")
             ->icon('/icons/icon-192.png')

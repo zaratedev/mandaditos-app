@@ -26,7 +26,7 @@ class OrderDelivered extends Notification
      */
     public function toArray(object $notifiable): array
     {
-        $courier = $this->order->courier?->name ?? 'Un repartidor';
+        $courier = $this->order->courier->name ?? 'Un repartidor';
 
         return [
             'type' => 'order_delivered',
@@ -38,9 +38,9 @@ class OrderDelivered extends Notification
 
     public function toWebPush(object $notifiable, mixed $notification): WebPushMessage
     {
-        $courier = $this->order->courier?->name ?? 'Un repartidor';
+        $courier = $this->order->courier->name ?? 'Un repartidor';
 
-        return (new WebPushMessage())
+        return (new WebPushMessage)
             ->title('Pedido entregado')
             ->body("Pedido #{$this->order->id} entregado por {$courier}.")
             ->icon('/icons/icon-192.png')
