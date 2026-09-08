@@ -31,11 +31,38 @@ class OrderController extends Controller
 {
     public function index(Request $request): Response
     {
-        $status = $request->string('status')->toString();
+        $request->validate([
+            'status' => ['nullable', Rule::enum(OrderStatus::class)],
+            'client_id' => ['nullable', 'integer'],
+            'payment_status' => ['nullable', Rule::enum(PaymentStatus::class)],
+            'payment_method' => ['nullable', Rule::enum(PaymentMethod::class)],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+        ]);
+
+        $filters = [
+            'status' => $request->string('status')->toString(),
+            'courier_id' => $request->string('courier_id')->toString(),
+            'client_id' => $request->string('client_id')->toString(),
+            'payment_status' => $request->string('payment_status')->toString(),
+            'payment_method' => $request->string('payment_method')->toString(),
+            'from' => $request->string('from')->toString(),
+            'to' => $request->string('to')->toString(),
+        ];
 
         $orders = Order::query()
             ->with(['client:id,name', 'courier:id,name'])
-            ->when($status !== '', fn ($query) => $query->where('status', $status))
+            ->when($filters['status'] !== '', fn ($query) => $query->where('status', $filters['status']))
+            ->when($filters['courier_id'] === 'unassigned', fn ($query) => $query->whereNull('courier_id'))
+            ->when(
+                $filters['courier_id'] !== '' && $filters['courier_id'] !== 'unassigned',
+                fn ($query) => $query->where('courier_id', $filters['courier_id']),
+            )
+            ->when($filters['client_id'] !== '', fn ($query) => $query->where('client_id', $filters['client_id']))
+            ->when($filters['payment_status'] !== '', fn ($query) => $query->where('payment_status', $filters['payment_status']))
+            ->when($filters['payment_method'] !== '', fn ($query) => $query->where('payment_method', $filters['payment_method']))
+            ->when($filters['from'] !== '', fn ($query) => $query->whereDate('created_at', '>=', $filters['from']))
+            ->when($filters['to'] !== '', fn ($query) => $query->whereDate('created_at', '<=', $filters['to']))
             ->latest()
             ->paginate(15)
             ->withQueryString()
@@ -53,8 +80,16 @@ class OrderController extends Controller
 
         return Inertia::render('orders/Index', [
             'orders' => $orders,
-            'filters' => ['status' => $status],
+            'filters' => $filters,
             'statuses' => $this->statusOptions(),
+            'couriers' => $this->couriers(),
+            'clients' => Client::query()->orderBy('name')->get(['id', 'name']),
+            'paymentStatuses' => collect(PaymentStatus::cases())
+                ->map(fn (PaymentStatus $status): array => ['value' => $status->value, 'label' => $status->label()])
+                ->all(),
+            'paymentMethods' => collect(PaymentMethod::cases())
+                ->map(fn (PaymentMethod $method): array => ['value' => $method->value, 'label' => $method->label()])
+                ->all(),
         ]);
     }
 

@@ -266,3 +266,38 @@ test('couriers cannot edit or cancel orders', function () {
     $this->actingAs($courier)->get("/orders/{$order->id}/edit")->assertForbidden();
     $this->actingAs($courier)->post("/orders/{$order->id}/cancel")->assertForbidden();
 });
+
+test('orders can be filtered by courier, client and payment status', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $courierA = User::factory()->create(['role' => UserRole::Courier]);
+    $courierB = User::factory()->create(['role' => UserRole::Courier]);
+    $client = Client::factory()->create();
+    $address = Address::factory()->for($client)->create();
+
+    Order::factory()->create([
+        'client_id' => $client->id,
+        'address_id' => $address->id,
+        'created_by' => $admin->id,
+        'courier_id' => $courierA->id,
+        'payment_status' => PaymentStatus::Paid,
+    ]);
+    Order::factory()->create([
+        'client_id' => $client->id,
+        'address_id' => $address->id,
+        'created_by' => $admin->id,
+        'courier_id' => $courierB->id,
+        'payment_status' => PaymentStatus::Pending,
+    ]);
+
+    $this->actingAs($admin)->get('/orders?courier_id='.$courierA->id)
+        ->assertInertia(fn (Assert $page) => $page->component('orders/Index')->has('orders.data', 1));
+
+    $this->actingAs($admin)->get('/orders?payment_status=paid')
+        ->assertInertia(fn (Assert $page) => $page->has('orders.data', 1));
+
+    $this->actingAs($admin)->get('/orders?client_id='.$client->id)
+        ->assertInertia(fn (Assert $page) => $page->has('orders.data', 2));
+
+    $this->actingAs($admin)->get('/orders?courier_id=unassigned')
+        ->assertInertia(fn (Assert $page) => $page->has('orders.data', 0));
+});
