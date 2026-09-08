@@ -10,6 +10,7 @@ use App\Models\Address;
 use App\Models\Client;
 use App\Models\Order;
 use App\Models\User;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('admin can create an order with priced items and totals are computed', function () {
     $admin = User::factory()->create(['role' => UserRole::Admin]);
@@ -150,7 +151,14 @@ test('admin can view the dashboard with the daily cash cut', function () {
         'paid_at' => now(),
     ]);
 
-    $this->actingAs($admin)->get('/dashboard')->assertOk();
+    $this->actingAs($admin)->get('/dashboard')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Dashboard')
+            ->where('isAdmin', true)
+            ->has('ordersPerDay', 14)
+            ->has('openByStatus')
+        );
 });
 
 test('couriers see their own dashboard without the cash cut', function () {

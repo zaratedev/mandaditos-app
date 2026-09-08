@@ -35,13 +35,37 @@ class DashboardController extends Controller
             ->groupBy('status')
             ->pluck('aggregate', 'status');
 
-        $statusBreakdown = collect(OrderStatus::cases())
+        $openByStatus = collect(OrderStatus::cases())
+            ->filter(fn (OrderStatus $status): bool => $status->isOpen())
             ->map(fn (OrderStatus $status): array => [
                 'status' => $status->value,
                 'label' => $status->label(),
                 'count' => (int) ($statusCounts[$status->value] ?? 0),
             ])
             ->values();
+
+        $since = $today->copy()->subDays(13);
+
+        $perDay = Order::query()
+            ->where('created_at', '>=', $since->startOfDay())
+            ->selectRaw('DATE(created_at) as day')
+            ->selectRaw('COUNT(*) as orders_count')
+            ->selectRaw("SUM(CASE WHEN payment_status = 'paid' THEN total ELSE 0 END) as revenue")
+            ->groupBy('day')
+            ->get()
+            ->keyBy('day');
+
+        $ordersPerDay = collect(range(0, 13))
+            ->map(function (int $offset) use ($since, $perDay): array {
+                $date = $since->addDays($offset)->toDateString();
+                $row = $perDay->get($date);
+
+                return [
+                    'day' => $date,
+                    'orders' => $row ? (int) $row->orders_count : 0,
+                    'revenue' => $row ? round((float) $row->revenue, 2) : 0.0,
+                ];
+            });
 
         $stats = [
             'today' => Order::whereDate('created_at', $today)->count(),
@@ -59,7 +83,8 @@ class DashboardController extends Controller
         return Inertia::render('Dashboard', [
             'isAdmin' => true,
             'stats' => $stats,
-            'statusBreakdown' => $statusBreakdown,
+            'openByStatus' => $openByStatus,
+            'ordersPerDay' => $ordersPerDay,
             'corte' => $corte,
             'corteTotals' => $corteTotals,
         ]);
