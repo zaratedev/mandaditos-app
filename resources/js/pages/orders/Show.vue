@@ -3,6 +3,7 @@ import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
 import Select from '@/components/Select.vue';
 import { Button } from '@/components/ui/button';
+import { confirm } from '@/lib/confirm';
 import { money, paymentBadgeClass, statusBadgeClass } from '@/lib/format';
 
 interface Item {
@@ -92,8 +93,17 @@ function savePurchase(): void {
     purchaseForm.post(`/orders/${props.order.id}/purchase`, { preserveScroll: true });
 }
 
-function cancelOrder(): void {
-    if (confirm('¿Seguro que quieres cancelar este pedido?')) {
+async function cancelOrder(): Promise<void> {
+    const confirmed = await confirm({
+        title: `¿Cancelar el pedido #${props.order.id}?`,
+        description:
+            'Saldrá de los pedidos abiertos y de la lista de pendientes del repartidor.',
+        confirmLabel: 'Cancelar el pedido',
+        cancelLabel: 'Volver',
+        destructive: true,
+    });
+
+    if (confirmed) {
         router.post(`/orders/${props.order.id}/cancel`);
     }
 }

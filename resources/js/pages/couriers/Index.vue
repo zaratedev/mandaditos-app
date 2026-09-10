@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { reactive } from 'vue';
 import Select from '@/components/Select.vue';
+import { confirm } from '@/lib/confirm';
 
 interface CourierRow {
     id: number;
@@ -62,14 +63,18 @@ function clear(): void {
     router.get('/couriers', {}, { preserveState: true, replace: true });
 }
 
-function toggleActive(courier: CourierRow): void {
+async function toggleActive(courier: CourierRow): Promise<void> {
     const action = courier.is_active ? 'deactivate' : 'activate';
 
     if (courier.is_active && courier.open_orders_count > 0) {
-        const confirmed = window.confirm(
-            `${courier.name} tiene ${courier.open_orders_count} pedido(s) en curso. ` +
-                'Al desactivarlo ya no podrá entrar ni recibir pedidos nuevos, y tendrás que reasignar esos pedidos. ¿Continuar?',
-        );
+        const confirmed = await confirm({
+            title: `¿Desactivar a ${courier.name}?`,
+            description:
+                `Tiene ${courier.open_orders_count} pedido(s) en curso. Al desactivarlo ya no podrá ` +
+                'entrar ni recibir pedidos nuevos, y tendrás que reasignar esos pedidos.',
+            confirmLabel: 'Desactivar',
+            destructive: true,
+        });
 
         if (!confirmed) {
             return;

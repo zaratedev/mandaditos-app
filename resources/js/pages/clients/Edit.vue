@@ -4,6 +4,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { confirm } from '@/lib/confirm';
 
 interface AddressRow {
     id: number | null;
@@ -89,12 +90,16 @@ function toggleArchive(): void {
     );
 }
 
-function destroy(): void {
-    if (
-        window.confirm(
-            `¿Eliminar a ${props.client.name}? Esta acción no se puede deshacer.`,
-        )
-    ) {
+async function destroy(): Promise<void> {
+    const confirmed = await confirm({
+        title: `¿Eliminar a ${props.client.name}?`,
+        description:
+            'Se eliminarán también sus direcciones. Esta acción no se puede deshacer.',
+        confirmLabel: 'Eliminar',
+        destructive: true,
+    });
+
+    if (confirmed) {
         router.delete(`/clients/${props.client.id}`);
     }
 }

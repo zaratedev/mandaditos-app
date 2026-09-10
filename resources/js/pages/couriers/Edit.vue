@@ -5,6 +5,7 @@ import PasswordInput from '@/components/PasswordInput.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { confirm } from '@/lib/confirm';
 
 interface Courier {
     id: number;
@@ -43,14 +44,18 @@ function submit(): void {
     });
 }
 
-function toggleActive(): void {
+async function toggleActive(): Promise<void> {
     const action = props.courier.is_active ? 'deactivate' : 'activate';
 
     if (props.courier.is_active && props.courier.open_orders_count > 0) {
-        const confirmed = window.confirm(
-            `${props.courier.name} tiene ${props.courier.open_orders_count} pedido(s) en curso. ` +
-                'Al desactivarlo ya no podrá entrar ni recibir pedidos nuevos, y tendrás que reasignar esos pedidos. ¿Continuar?',
-        );
+        const confirmed = await confirm({
+            title: `¿Desactivar a ${props.courier.name}?`,
+            description:
+                `Tiene ${props.courier.open_orders_count} pedido(s) en curso. Al desactivarlo ya no podrá ` +
+                'entrar ni recibir pedidos nuevos, y tendrás que reasignar esos pedidos.',
+            confirmLabel: 'Desactivar',
+            destructive: true,
+        });
 
         if (!confirmed) {
             return;
