@@ -9,6 +9,8 @@ use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use Carbon\CarbonImmutable;
 use Database\Factories\OrderFactory;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -73,6 +75,19 @@ class Order extends Model
             'delivered_at' => 'datetime',
             'paid_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Orders still in flight: everything that is neither delivered nor cancelled.
+     * The dashboard counts them and the order list filters by them, so the rule
+     * lives here once.
+     *
+     * @param  Builder<Order>  $query
+     */
+    #[Scope]
+    protected function open(Builder $query): void
+    {
+        $query->whereNotIn('status', [OrderStatus::Delivered->value, OrderStatus::Cancelled->value]);
     }
 
     /**

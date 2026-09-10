@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import DailyOrdersChart from '@/components/charts/DailyOrdersChart.vue';
 import StatusBars from '@/components/charts/StatusBars.vue';
 import { money } from '@/lib/format';
@@ -34,8 +35,9 @@ interface NextOrder {
     next_label: string | null;
 }
 
-defineProps<{
+const props = defineProps<{
     isAdmin: boolean;
+    today?: string;
     stats?: { today: number; open: number; deliveredToday: number; unpaidDelivered: number };
     openByStatus?: StatusRow[];
     ordersPerDay?: DayRow[];
@@ -58,6 +60,29 @@ defineOptions({
 function advance(orderId: number, status: string): void {
     router.post(`/board/${orderId}/status`, { status }, { preserveScroll: true });
 }
+
+function ordersUrl(params: Record<string, string>): string {
+    return `/orders?${new URLSearchParams(params).toString()}`;
+}
+
+/**
+ * Each stat card opens the order list showing exactly the orders it counted, so the
+ * filters here have to mirror the ones the dashboard query used.
+ */
+const statLinks = computed(() => {
+    const day = props.today ?? '';
+
+    return {
+        today: ordersUrl({ from: day, to: day }),
+        open: ordersUrl({ status: 'open' }),
+        deliveredToday: ordersUrl({ status: 'delivered', date_field: 'delivered', from: day, to: day }),
+        unpaidDelivered: ordersUrl({ status: 'delivered', payment_status: 'pending' }),
+    };
+});
+
+function openStatus(status: string): void {
+    router.get(ordersUrl({ status }));
+}
 </script>
 
 <template>
@@ -66,22 +91,22 @@ function advance(orderId: number, status: string): void {
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <template v-if="isAdmin">
             <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+                <Link :href="statLinks.today" class="rounded-xl border border-sidebar-border/70 p-4 transition hover:bg-muted/50 dark:border-sidebar-border">
                     <p class="text-sm text-muted-foreground">Pedidos hoy</p>
                     <p class="mt-1 text-3xl font-semibold">{{ stats?.today ?? 0 }}</p>
-                </div>
-                <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+                </Link>
+                <Link :href="statLinks.open" class="rounded-xl border border-sidebar-border/70 p-4 transition hover:bg-muted/50 dark:border-sidebar-border">
                     <p class="text-sm text-muted-foreground">Pedidos abiertos</p>
                     <p class="mt-1 text-3xl font-semibold">{{ stats?.open ?? 0 }}</p>
-                </div>
-                <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+                </Link>
+                <Link :href="statLinks.deliveredToday" class="rounded-xl border border-sidebar-border/70 p-4 transition hover:bg-muted/50 dark:border-sidebar-border">
                     <p class="text-sm text-muted-foreground">Entregados hoy</p>
                     <p class="mt-1 text-3xl font-semibold">{{ stats?.deliveredToday ?? 0 }}</p>
-                </div>
-                <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+                </Link>
+                <Link :href="statLinks.unpaidDelivered" class="rounded-xl border border-sidebar-border/70 p-4 transition hover:bg-muted/50 dark:border-sidebar-border">
                     <p class="text-sm text-muted-foreground">Entregados sin pagar</p>
                     <p class="mt-1 text-3xl font-semibold">{{ stats?.unpaidDelivered ?? 0 }}</p>
-                </div>
+                </Link>
             </div>
 
             <div class="grid gap-6 lg:grid-cols-3">
@@ -92,8 +117,13 @@ function advance(orderId: number, status: string): void {
                 </div>
 
                 <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                    <h2 class="mb-4 text-base font-semibold">Pedidos abiertos por estado</h2>
-                    <StatusBars v-if="openByStatus && openByStatus.length > 0" :data="openByStatus" />
+                    <h2 class="mb-1 text-base font-semibold">Pedidos abiertos por estado</h2>
+                    <p class="mb-3 text-xs text-muted-foreground">Toca una barra para ver esos pedidos</p>
+                    <StatusBars
+                        v-if="openByStatus && openByStatus.length > 0"
+                        :data="openByStatus"
+                        @select="openStatus"
+                    />
                     <p v-else class="text-sm text-muted-foreground">Sin pedidos abiertos.</p>
                 </div>
             </div>

@@ -33,7 +33,7 @@ class CourierBoardController extends Controller
     {
         $orders = $request->user()->assignedOrders()
             ->with('client:id,name')
-            ->whereNotIn('status', [OrderStatus::Delivered->value, OrderStatus::Cancelled->value])
+            ->open()
             ->latest()
             ->get()
             ->map(fn (Order $order): array => [

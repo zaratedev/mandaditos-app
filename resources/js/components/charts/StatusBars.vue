@@ -14,6 +14,10 @@ const props = defineProps<{
     data: StatusPoint[];
 }>();
 
+const emit = defineEmits<{
+    select: [status: string];
+}>();
+
 const canvas = ref<HTMLCanvasElement | null>(null);
 let chart: Chart | null = null;
 let observer: MutationObserver | null = null;
@@ -61,6 +65,23 @@ function render(): void {
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
+            // A bar is a filtered slice of the order list, so clicking it should open
+            // that slice. The cursor is the only hint the canvas can give.
+            onClick: (_event, elements) => {
+                const point = props.data[elements[0]?.index ?? -1];
+
+                if (point) {
+                    emit('select', point.status);
+                }
+            },
+            onHover: (event, elements) => {
+                const target = event.native?.target as HTMLElement | null;
+
+                if (target) {
+                    target.style.cursor =
+                        elements.length > 0 ? 'pointer' : 'default';
+                }
+            },
             plugins: {
                 legend: { display: false },
             },

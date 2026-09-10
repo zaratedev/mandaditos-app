@@ -23,6 +23,66 @@ test('authenticated users can visit the dashboard', function () {
     $response->assertOk();
 });
 
+test('every admin stat links to an order list holding the same orders', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $client = Client::factory()->create();
+    $address = Address::factory()->for($client)->create();
+
+    $base = [
+        'client_id' => $client->id,
+        'address_id' => $address->id,
+        'created_by' => $admin->id,
+    ];
+
+    // Open, created today.
+    Order::factory()->create([...$base, 'status' => OrderStatus::Requested, 'created_at' => now()]);
+    // Open, created earlier.
+    Order::factory()->create([...$base, 'status' => OrderStatus::OnTheWay, 'created_at' => now()->subDays(2)]);
+    // Delivered today and already paid.
+    Order::factory()->create([...$base,
+        'status' => OrderStatus::Delivered,
+        'created_at' => now()->subDay(),
+        'delivered_at' => now(),
+        'payment_status' => PaymentStatus::Paid,
+        'paid_at' => now(),
+    ]);
+    // Delivered today, still unpaid.
+    Order::factory()->create([...$base,
+        'status' => OrderStatus::Delivered,
+        'created_at' => now()->subDays(3),
+        'delivered_at' => now(),
+        'payment_status' => PaymentStatus::Pending,
+    ]);
+    // Created today but cancelled: it counts for the day, never as open.
+    Order::factory()->create([...$base, 'status' => OrderStatus::Cancelled, 'created_at' => now()]);
+
+    $today = today()->toDateString();
+
+    $this->actingAs($admin)->get('/dashboard')
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('isAdmin', true)
+            ->where('today', $today)
+            ->where('stats.today', 2)
+            ->where('stats.open', 2)
+            ->where('stats.deliveredToday', 2)
+            ->where('stats.unpaidDelivered', 1));
+
+    // The links the cards point at have to come back with the very same counts.
+    $links = [
+        ['count' => 2, 'url' => "/orders?from={$today}&to={$today}"],
+        ['count' => 2, 'url' => '/orders?status=open'],
+        ['count' => 2, 'url' => "/orders?status=delivered&date_field=delivered&from={$today}&to={$today}"],
+        ['count' => 1, 'url' => '/orders?status=delivered&payment_status=pending'],
+    ];
+
+    foreach ($links as $link) {
+        $this->actingAs($admin)->get($link['url'])
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('orders/Index')
+                ->where('orders.total', $link['count']));
+    }
+});
+
 test('the courier panel surfaces the order closest to delivery', function () {
     $admin = User::factory()->create(['role' => UserRole::Admin]);
     $courier = User::factory()->create(['role' => UserRole::Courier]);

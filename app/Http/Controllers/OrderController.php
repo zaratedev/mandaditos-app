@@ -31,13 +31,30 @@ use Inertia\Response;
 
 class OrderController extends Controller
 {
+    /**
+     * Pseudo status for the list filter: every order that is still in flight. It is
+     * not an OrderStatus, so it only ever reaches the query through this constant.
+     */
+    private const STATUS_OPEN = 'open';
+
+    /**
+     * Which date the from/to range filters on. An order carries several dates and
+     * "delivered today" is a different question than "created today".
+     */
+    private const DATE_FIELDS = [
+        'created' => ['column' => 'created_at', 'label' => 'Creación'],
+        'delivered' => ['column' => 'delivered_at', 'label' => 'Entrega'],
+        'paid' => ['column' => 'paid_at', 'label' => 'Pago'],
+    ];
+
     public function index(Request $request): Response
     {
         $request->validate([
-            'status' => ['nullable', Rule::enum(OrderStatus::class)],
+            'status' => ['nullable', Rule::in(array_column($this->filterStatusOptions(), 'value'))],
             'client_id' => ['nullable', 'integer'],
             'payment_status' => ['nullable', Rule::enum(PaymentStatus::class)],
             'payment_method' => ['nullable', Rule::enum(PaymentMethod::class)],
+            'date_field' => ['nullable', Rule::in(array_keys(self::DATE_FIELDS))],
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],
         ]);
@@ -48,13 +65,20 @@ class OrderController extends Controller
             'client_id' => $request->string('client_id')->toString(),
             'payment_status' => $request->string('payment_status')->toString(),
             'payment_method' => $request->string('payment_method')->toString(),
+            'date_field' => $request->string('date_field')->toString() ?: 'created',
             'from' => $request->string('from')->toString(),
             'to' => $request->string('to')->toString(),
         ];
 
+        $dateColumn = (self::DATE_FIELDS[$filters['date_field']] ?? self::DATE_FIELDS['created'])['column'];
+
         $orders = Order::query()
             ->with(['client:id,name', 'courier:id,name'])
-            ->when($filters['status'] !== '', fn ($query) => $query->where('status', $filters['status']))
+            ->when($filters['status'] === self::STATUS_OPEN, fn ($query) => $query->open())
+            ->when(
+                $filters['status'] !== '' && $filters['status'] !== self::STATUS_OPEN,
+                fn ($query) => $query->where('status', $filters['status']),
+            )
             ->when($filters['courier_id'] === 'unassigned', fn ($query) => $query->whereNull('courier_id'))
             ->when(
                 $filters['courier_id'] !== '' && $filters['courier_id'] !== 'unassigned',
@@ -63,8 +87,8 @@ class OrderController extends Controller
             ->when($filters['client_id'] !== '', fn ($query) => $query->where('client_id', $filters['client_id']))
             ->when($filters['payment_status'] !== '', fn ($query) => $query->where('payment_status', $filters['payment_status']))
             ->when($filters['payment_method'] !== '', fn ($query) => $query->where('payment_method', $filters['payment_method']))
-            ->when($filters['from'] !== '', fn ($query) => $query->whereDate('created_at', '>=', $filters['from']))
-            ->when($filters['to'] !== '', fn ($query) => $query->whereDate('created_at', '<=', $filters['to']))
+            ->when($filters['from'] !== '', fn ($query) => $query->whereDate($dateColumn, '>=', $filters['from']))
+            ->when($filters['to'] !== '', fn ($query) => $query->whereDate($dateColumn, '<=', $filters['to']))
             ->latest()
             ->paginate(15)
             ->withQueryString()
@@ -83,7 +107,8 @@ class OrderController extends Controller
         return Inertia::render('orders/Index', [
             'orders' => $orders,
             'filters' => $filters,
-            'statuses' => $this->statusOptions(),
+            'statuses' => $this->filterStatusOptions(),
+            'dateFields' => $this->dateFieldOptions(),
             'couriers' => $this->couriers(),
             'clients' => Client::query()->orderBy('name')->get(['id', 'name']),
             'paymentStatuses' => collect(PaymentStatus::cases())
@@ -350,6 +375,32 @@ class OrderController extends Controller
     {
         return collect(OrderStatus::cases())
             ->map(fn (OrderStatus $status): array => ['value' => $status->value, 'label' => $status->label()])
+            ->all();
+    }
+
+    /**
+     * The list filter also offers "open", which spans several statuses. It stays out
+     * of statusOptions() so the status pickers on the order pages keep only real
+     * statuses.
+     *
+     * @return list<array{value: string, label: string}>
+     */
+    private function filterStatusOptions(): array
+    {
+        return [
+            ['value' => self::STATUS_OPEN, 'label' => 'Abiertos'],
+            ...$this->statusOptions(),
+        ];
+    }
+
+    /**
+     * @return array<int, array{value: string, label: string}>
+     */
+    private function dateFieldOptions(): array
+    {
+        return collect(self::DATE_FIELDS)
+            ->map(fn (array $field, string $value): array => ['value' => $value, 'label' => $field['label']])
+            ->values()
             ->all();
     }
 

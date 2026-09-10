@@ -96,7 +96,7 @@ class DashboardController extends Controller
 
         $stats = [
             'today' => Order::whereDate('created_at', $today)->count(),
-            'open' => Order::whereNotIn('status', [OrderStatus::Delivered->value, OrderStatus::Cancelled->value])->count(),
+            'open' => Order::query()->open()->count(),
             'deliveredToday' => Order::where('status', OrderStatus::Delivered->value)
                 ->whereDate('delivered_at', $today)
                 ->count(),
@@ -109,6 +109,10 @@ class DashboardController extends Controller
 
         return Inertia::render('Dashboard', [
             'isAdmin' => true,
+            // The stat cards link into the order list, and the filters there run on
+            // dates, not on the browser's clock: the day has to come from the server
+            // that counted them.
+            'today' => $today->toDateString(),
             'stats' => $stats,
             'openByStatus' => $openByStatus,
             'ordersPerDay' => $ordersPerDay,
@@ -128,7 +132,7 @@ class DashboardController extends Controller
     {
         $open = $user->assignedOrders()
             ->with(['client:id,name', 'address:id,street,neighborhood'])
-            ->whereNotIn('status', [OrderStatus::Delivered->value, OrderStatus::Cancelled->value])
+            ->open()
             ->get();
 
         $today = today();

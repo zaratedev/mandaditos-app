@@ -301,3 +301,74 @@ test('orders can be filtered by courier, client and payment status', function ()
     $this->actingAs($admin)->get('/orders?courier_id=unassigned')
         ->assertInertia(fn (Assert $page) => $page->has('orders.data', 0));
 });
+
+test('the open filter keeps every order that is neither delivered nor cancelled', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $client = Client::factory()->create();
+    $address = Address::factory()->for($client)->create();
+
+    $base = [
+        'client_id' => $client->id,
+        'address_id' => $address->id,
+        'created_by' => $admin->id,
+    ];
+
+    Order::factory()->create([...$base, 'status' => OrderStatus::Requested]);
+    Order::factory()->create([...$base, 'status' => OrderStatus::OnTheWay]);
+    Order::factory()->create([...$base, 'status' => OrderStatus::Delivered]);
+    Order::factory()->create([...$base, 'status' => OrderStatus::Cancelled]);
+
+    $this->actingAs($admin)->get('/orders?status=open')
+        ->assertInertia(fn (Assert $page) => $page->component('orders/Index')->has('orders.data', 2));
+});
+
+test('the date range can filter on the delivery and payment dates', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $client = Client::factory()->create();
+    $address = Address::factory()->for($client)->create();
+
+    $base = [
+        'client_id' => $client->id,
+        'address_id' => $address->id,
+        'created_by' => $admin->id,
+        'status' => OrderStatus::Delivered,
+    ];
+
+    // Ordered a week ago, delivered and paid today.
+    Order::factory()->create([
+        ...$base,
+        'created_at' => now()->subWeek(),
+        'delivered_at' => now(),
+        'payment_status' => PaymentStatus::Paid,
+        'paid_at' => now(),
+    ]);
+
+    // Ordered today, delivered and paid yesterday: the created range must not catch it
+    // when the filter is looking at the delivery date.
+    Order::factory()->create([
+        ...$base,
+        'created_at' => now(),
+        'delivered_at' => now()->subDay(),
+        'payment_status' => PaymentStatus::Paid,
+        'paid_at' => now()->subDay(),
+    ]);
+
+    $today = today()->toDateString();
+
+    $this->actingAs($admin)->get("/orders?date_field=delivered&from={$today}&to={$today}")
+        ->assertInertia(fn (Assert $page) => $page->component('orders/Index')->has('orders.data', 1));
+
+    $this->actingAs($admin)->get("/orders?date_field=paid&from={$today}&to={$today}")
+        ->assertInertia(fn (Assert $page) => $page->has('orders.data', 1));
+
+    // Without a date field the range still runs on the creation date.
+    $this->actingAs($admin)->get("/orders?from={$today}&to={$today}")
+        ->assertInertia(fn (Assert $page) => $page->has('orders.data', 1));
+});
+
+test('an unknown status or date field is rejected', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+
+    $this->actingAs($admin)->get('/orders?status=nope')->assertSessionHasErrors('status');
+    $this->actingAs($admin)->get('/orders?date_field=nope')->assertSessionHasErrors('date_field');
+});

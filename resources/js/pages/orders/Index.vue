@@ -42,6 +42,7 @@ interface Filters {
     client_id: string;
     payment_status: string;
     payment_method: string;
+    date_field: string;
     from: string;
     to: string;
 }
@@ -54,6 +55,7 @@ const props = defineProps<{
     clients: { id: number; name: string }[];
     paymentStatuses: Option[];
     paymentMethods: Option[];
+    dateFields: Option[];
 }>();
 
 defineOptions({
@@ -61,6 +63,21 @@ defineOptions({
         breadcrumbs: [{ title: 'Pedidos', href: '/orders' }],
     },
 });
+
+/**
+ * What "no filter" looks like. Every filter clears to an empty string except the date
+ * field, which always has to name a column for the from/to range to run on.
+ */
+const emptyFilters: Filters = {
+    status: '',
+    courier_id: '',
+    client_id: '',
+    payment_status: '',
+    payment_method: '',
+    date_field: 'created',
+    from: '',
+    to: '',
+};
 
 const form = reactive<Filters>({ ...props.filters });
 
@@ -77,9 +94,7 @@ function apply(): void {
 }
 
 function clear(): void {
-    (Object.keys(form) as (keyof Filters)[]).forEach((key) => {
-        form[key] = '';
-    });
+    Object.assign(form, emptyFilters);
 
     router.get('/orders', {}, { preserveState: true, replace: true });
 }
@@ -150,6 +165,15 @@ function clear(): void {
                     <Select id="f-pay-method" v-model="form.payment_method">
                         <option value="">Todos</option>
                         <option v-for="option in paymentMethods" :key="option.value" :value="option.value">
+                            {{ option.label }}
+                        </option>
+                    </Select>
+                </div>
+
+                <div class="grid gap-1">
+                    <label for="f-date-field" class="text-xs text-muted-foreground">Filtrar fecha por</label>
+                    <Select id="f-date-field" v-model="form.date_field">
+                        <option v-for="option in dateFields" :key="option.value" :value="option.value">
                             {{ option.label }}
                         </option>
                     </Select>
