@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Chart, registerables, type Plugin, type TooltipItem } from 'chart.js';
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { chartTheme } from '@/lib/chartTheme';
 
 Chart.register(...registerables);
 
@@ -21,10 +22,6 @@ const emit = defineEmits<{
 const canvas = ref<HTMLCanvasElement | null>(null);
 let chart: Chart | null = null;
 let observer: MutationObserver | null = null;
-
-function isDark(): boolean {
-    return document.documentElement.classList.contains('dark');
-}
 
 /**
  * Writes each count at the end of its bar. Reading a horizontal bar against the
@@ -62,15 +59,7 @@ function render(): void {
 
     chart?.destroy();
 
-    const dark = isDark();
-    // The bars carry the data, so they have to stay legible against the card. The
-    // brand yellow is bright enough to almost disappear on white (1.4:1), so in light
-    // mode it gets a darker amber outline that reads at 3.5:1; on the dark card the
-    // fill alone is already at 14:1 and needs no help.
-    const barColor = '#fed61c';
-    const barBorder = dark ? 'transparent' : '#a38600';
-    const muted = '#898781';
-    const grid = dark ? 'rgba(255,255,255,0.08)' : 'rgba(11,11,11,0.06)';
+    const theme = chartTheme();
 
     chart = new Chart(canvas.value, {
         type: 'bar',
@@ -80,20 +69,19 @@ function render(): void {
                 {
                     label: 'Pedidos abiertos',
                     data: props.data.map((point) => point.count),
-                    backgroundColor: barColor,
-                    borderColor: barBorder,
+                    backgroundColor: theme.series,
+                    hoverBackgroundColor: theme.seriesHover,
                     borderSkipped: false,
                     borderRadius: 4,
                     maxBarThickness: 22,
                 },
             ],
         },
-        plugins: [countLabels(muted)],
+        plugins: [countLabels(theme.label)],
         options: {
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
-            elements: { bar: { borderWidth: dark ? 0 : 1 } },
             // The whole row answers to the pointer, not just the bar: a status with
             // one order draws a sliver nobody can hit.
             interaction: { mode: 'index', intersect: false },
@@ -128,12 +116,12 @@ function render(): void {
                     beginAtZero: true,
                     // Room at the end of the longest bar for its count to sit in.
                     grace: '12%',
-                    ticks: { color: muted, precision: 0 },
-                    grid: { color: grid },
+                    ticks: { color: theme.axis, precision: 0 },
+                    grid: { color: theme.grid },
                 },
                 y: {
                     grid: { display: false },
-                    ticks: { color: muted },
+                    ticks: { color: theme.axis },
                 },
             },
         },

@@ -8,6 +8,7 @@ import {
     shortDayMonth,
     shortMonth,
 } from '@/lib/format';
+import { chartTheme } from '@/lib/chartTheme';
 
 Chart.register(...registerables);
 
@@ -20,6 +21,8 @@ interface Point {
 const props = defineProps<{
     data: Point[];
     unit: string;
+    /** Today as the server counts it, so the current bar is never off by a timezone. */
+    today?: string;
 }>();
 
 const emit = defineEmits<{
@@ -30,16 +33,26 @@ const canvas = ref<HTMLCanvasElement | null>(null);
 let chart: Chart | null = null;
 let observer: MutationObserver | null = null;
 
-function isDark(): boolean {
-    return document.documentElement.classList.contains('dark');
-}
-
 function axisLabel(date: string): string {
     return props.unit === 'month' ? shortMonth(date) : shortDayMonth(date);
 }
 
 function fullLabel(date: string): string {
     return props.unit === 'month' ? longMonth(date) : shortDate(date);
+}
+
+/**
+ * Whether a bar covers today. In a row of otherwise identical bars, the eye looks
+ * for now first, so now is the one bar that does not look like the others.
+ */
+function isCurrent(date: string): boolean {
+    if (!props.today) {
+        return false;
+    }
+
+    return props.unit === 'month'
+        ? date.slice(0, 7) === props.today.slice(0, 7)
+        : date === props.today;
 }
 
 function render(): void {
@@ -49,15 +62,7 @@ function render(): void {
 
     chart?.destroy();
 
-    const dark = isDark();
-    // The bars carry the data, so they have to stay legible against the card. The
-    // brand yellow is bright enough to almost disappear on white (1.4:1), so in light
-    // mode it gets a darker amber outline that reads at 3.5:1; on the dark card the
-    // fill alone is already at 14:1 and needs no help.
-    const barColor = '#fed61c';
-    const barBorder = dark ? 'transparent' : '#a38600';
-    const muted = '#898781';
-    const grid = dark ? 'rgba(255,255,255,0.08)' : 'rgba(11,11,11,0.06)';
+    const theme = chartTheme();
 
     chart = new Chart(canvas.value, {
         type: 'bar',
@@ -70,8 +75,12 @@ function render(): void {
                             ? 'Pedidos por mes'
                             : 'Pedidos por día',
                     data: props.data.map((point) => point.orders),
-                    backgroundColor: barColor,
-                    borderColor: barBorder,
+                    backgroundColor: props.data.map((point) =>
+                        isCurrent(point.date)
+                            ? theme.seriesCurrent
+                            : theme.series,
+                    ),
+                    hoverBackgroundColor: theme.seriesHover,
                     borderSkipped: false,
                     borderRadius: 4,
                     maxBarThickness: 28,
@@ -81,9 +90,6 @@ function render(): void {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            // Same idea as the outline above: a defined edge in light mode, none on
-            // the dark card where the fill already separates itself.
-            elements: { bar: { borderWidth: dark ? 0 : 1 } },
             // Hovering anywhere in a column reads that column, which on a narrow bar
             // is the difference between a tooltip and a game of hit-the-pixel.
             interaction: { mode: 'index', intersect: false },
@@ -127,7 +133,7 @@ function render(): void {
                 x: {
                     grid: { display: false },
                     ticks: {
-                        color: muted,
+                        color: theme.axis,
                         font: { size: 10 },
                         // A year of months still fits; a year of days does not, so the
                         // axis drops labels instead of stacking them on top of each other.
@@ -137,12 +143,12 @@ function render(): void {
                 },
                 y: {
                     beginAtZero: true,
-                    ticks: { color: muted, precision: 0 },
-                    grid: { color: grid },
+                    ticks: { color: theme.axis, precision: 0 },
+                    grid: { color: theme.grid },
                     title: {
                         display: true,
                         text: 'Pedidos',
-                        color: muted,
+                        color: theme.axis,
                         font: { size: 10 },
                     },
                 },
@@ -161,7 +167,7 @@ onMounted(() => {
     });
 });
 
-watch(() => [props.data, props.unit], render, { deep: true });
+watch(() => [props.data, props.unit, props.today], render, { deep: true });
 
 onBeforeUnmount(() => {
     observer?.disconnect();

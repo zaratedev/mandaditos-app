@@ -316,6 +316,7 @@ function openChartPoint(date: string): void {
                     <DailyOrdersChart
                         :data="ordersChart?.points ?? []"
                         :unit="ordersChart?.unit ?? 'day'"
+                        :today="today"
                         @select="openChartPoint"
                     />
                 </div>
