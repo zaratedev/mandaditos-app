@@ -372,3 +372,33 @@ test('an unknown status or date field is rejected', function () {
     $this->actingAs($admin)->get('/orders?status=nope')->assertSessionHasErrors('status');
     $this->actingAs($admin)->get('/orders?date_field=nope')->assertSessionHasErrors('date_field');
 });
+
+test('the orders list honours the page size, and refuses one off the menu', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $client = Client::factory()->create();
+    $address = Address::factory()->for($client)->create();
+
+    Order::factory()->count(26)->create([
+        'client_id' => $client->id,
+        'address_id' => $address->id,
+        'created_by' => $admin->id,
+    ]);
+
+    // Default: 25 rows on the page, the rest spill to page two, and the selector
+    // is told which size is in effect.
+    $this->actingAs($admin)->get('/orders')
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('orders/Index')
+            ->where('perPage', 25)
+            ->where('orders.total', 26)
+            ->has('orders.data', 25));
+
+    // A size from the menu caps the page.
+    $this->actingAs($admin)->get('/orders?per_page=10')
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('perPage', 10)
+            ->has('orders.data', 10));
+
+    // A size that is not on the menu is refused, not silently honoured.
+    $this->actingAs($admin)->get('/orders?per_page=15')->assertSessionHasErrors('per_page');
+});

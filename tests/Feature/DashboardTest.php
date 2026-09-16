@@ -83,6 +83,90 @@ test('every admin stat links to an order list holding the same orders', function
     }
 });
 
+test('the admin dashboard breaks out the money and the work waiting on the admin', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $courier = User::factory()->create(['role' => UserRole::Courier]);
+    $client = Client::factory()->create();
+    $address = Address::factory()->for($client)->create();
+
+    $base = [
+        'client_id' => $client->id,
+        'address_id' => $address->id,
+        'created_by' => $admin->id,
+    ];
+
+    // Earned today: paid today, its commission is the business's own cut.
+    Order::factory()->create([...$base,
+        'status' => OrderStatus::Delivered,
+        'courier_id' => $courier->id,
+        'delivered_at' => now(),
+        'payment_status' => PaymentStatus::Paid,
+        'payment_method' => PaymentMethod::Cash,
+        'paid_at' => now(),
+        'total' => 300.00,
+        'commission' => 50.00,
+    ]);
+
+    // Owed: delivered but never paid. Two of them, the oldest three days back.
+    Order::factory()->create([...$base,
+        'status' => OrderStatus::Delivered,
+        'delivered_at' => now()->subDays(3),
+        'payment_status' => PaymentStatus::Pending,
+        'total' => 200.00,
+    ]);
+    Order::factory()->create([...$base,
+        'status' => OrderStatus::Delivered,
+        'delivered_at' => now()->subDay(),
+        'payment_status' => PaymentStatus::Pending,
+        'total' => 100.00,
+    ]);
+
+    // On the street: bought and moving, the business's money still with the courier.
+    // The purchased one has been open long enough to count as stale.
+    Order::factory()->create([...$base,
+        'status' => OrderStatus::Purchased,
+        'courier_id' => $courier->id,
+        'created_at' => now()->subHours(3),
+        'total' => 150.00,
+    ]);
+    Order::factory()->create([...$base,
+        'status' => OrderStatus::OnTheWay,
+        'courier_id' => $courier->id,
+        'created_at' => now(),
+        'total' => 250.00,
+    ]);
+
+    // Waiting on the admin: open with nobody assigned yet, and just created.
+    Order::factory()->create([...$base,
+        'status' => OrderStatus::Requested,
+        'courier_id' => null,
+        'created_at' => now(),
+    ]);
+
+    $this->actingAs($admin)->get('/dashboard')
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('finance.commissionToday', 50)
+            ->where('finance.receivable.amount', 300)
+            ->where('finance.receivable.orders', 2)
+            ->where('finance.receivable.oldestDays', 3)
+            ->where('finance.inTheStreet.amount', 400)
+            ->where('finance.inTheStreet.orders', 2)
+            ->where('attention.unassigned', 1)
+            ->where('attention.stale', 1)
+            ->where('staleHours', 2));
+
+    // The two new cards point at lists holding exactly what they counted.
+    $this->actingAs($admin)->get('/orders?status=in_transit')
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('orders/Index')
+            ->where('orders.total', 2));
+
+    $this->actingAs($admin)->get('/orders?status=open&courier_id=unassigned')
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('orders/Index')
+            ->where('orders.total', 1));
+});
+
 test('the orders chart covers the last fourteen days by default', function () {
     $admin = User::factory()->create(['role' => UserRole::Admin]);
     $client = Client::factory()->create();

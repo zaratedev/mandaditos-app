@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import { Chart, registerables, type Plugin, type TooltipItem } from 'chart.js';
+import {
+    Chart,
+    registerables,
+    type Plugin,
+    type ScriptableContext,
+    type TooltipItem,
+} from 'chart.js';
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { chartTheme } from '@/lib/chartTheme';
 
@@ -61,6 +67,10 @@ function render(): void {
 
     const theme = chartTheme();
 
+    // Stagger each bar so the statuses fill in one after another, like the Chart.js
+    // "delay" sample, instead of the whole column snapping in at once.
+    const stagger = Math.min(60, Math.round(600 / (props.data.length || 1)));
+
     chart = new Chart(canvas.value, {
         type: 'bar',
         data: {
@@ -82,6 +92,15 @@ function render(): void {
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
+            animation: {
+                duration: 600,
+                easing: 'easeOutQuart',
+                // Only the first, full render staggers; hover and resize stay instant.
+                delay: (ctx: ScriptableContext<'bar'>): number =>
+                    ctx.type === 'data' && ctx.mode === 'default'
+                        ? ctx.dataIndex * stagger
+                        : 0,
+            },
             // The whole row answers to the pointer, not just the bar: a status with
             // one order draws a sliver nobody can hit.
             interaction: { mode: 'index', intersect: false },

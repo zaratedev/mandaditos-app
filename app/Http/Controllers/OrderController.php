@@ -38,6 +38,13 @@ class OrderController extends Controller
     private const STATUS_OPEN = 'open';
 
     /**
+     * Pseudo status for the list filter: orders already bought and on their way but
+     * not yet delivered — the money the couriers are carrying. Like STATUS_OPEN it
+     * spans several real statuses and only reaches the query through this constant.
+     */
+    private const STATUS_IN_TRANSIT = 'in_transit';
+
+    /**
      * Which date the from/to range filters on. An order carries several dates and
      * "delivered today" is a different question than "created today".
      */
@@ -46,6 +53,14 @@ class OrderController extends Controller
         'delivered' => ['column' => 'delivered_at', 'label' => 'Entrega'],
         'paid' => ['column' => 'paid_at', 'label' => 'Pago'],
     ];
+
+    /**
+     * How many orders a page can hold, and the default when the request asks for
+     * something that is not on the menu.
+     */
+    private const PER_PAGE_OPTIONS = [10, 25, 50, 100];
+
+    private const DEFAULT_PER_PAGE = 25;
 
     public function index(Request $request): Response
     {
@@ -57,7 +72,12 @@ class OrderController extends Controller
             'date_field' => ['nullable', Rule::in(array_keys(self::DATE_FIELDS))],
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],
+            'per_page' => ['nullable', 'integer', Rule::in(self::PER_PAGE_OPTIONS)],
         ]);
+
+        $perPage = in_array($request->integer('per_page'), self::PER_PAGE_OPTIONS, true)
+            ? $request->integer('per_page')
+            : self::DEFAULT_PER_PAGE;
 
         $filters = [
             'status' => $request->string('status')->toString(),
@@ -76,7 +96,14 @@ class OrderController extends Controller
             ->with(['client:id,name', 'courier:id,name'])
             ->when($filters['status'] === self::STATUS_OPEN, fn ($query) => $query->open())
             ->when(
-                $filters['status'] !== '' && $filters['status'] !== self::STATUS_OPEN,
+                $filters['status'] === self::STATUS_IN_TRANSIT,
+                fn ($query) => $query->whereIn('status', [
+                    OrderStatus::Purchased->value, OrderStatus::OnTheWay->value,
+                ]),
+            )
+            ->when(
+                $filters['status'] !== ''
+                    && ! in_array($filters['status'], [self::STATUS_OPEN, self::STATUS_IN_TRANSIT], true),
                 fn ($query) => $query->where('status', $filters['status']),
             )
             ->when($filters['courier_id'] === 'unassigned', fn ($query) => $query->whereNull('courier_id'))
@@ -90,7 +117,7 @@ class OrderController extends Controller
             ->when($filters['from'] !== '', fn ($query) => $query->whereDate($dateColumn, '>=', $filters['from']))
             ->when($filters['to'] !== '', fn ($query) => $query->whereDate($dateColumn, '<=', $filters['to']))
             ->latest()
-            ->paginate(15)
+            ->paginate($perPage)
             ->withQueryString()
             ->through(fn (Order $order): array => [
                 'id' => $order->id,
@@ -107,6 +134,8 @@ class OrderController extends Controller
         return Inertia::render('orders/Index', [
             'orders' => $orders,
             'filters' => $filters,
+            'perPage' => $perPage,
+            'perPageOptions' => self::PER_PAGE_OPTIONS,
             'statuses' => $this->filterStatusOptions(),
             'dateFields' => $this->dateFieldOptions(),
             'couriers' => $this->couriers(),
@@ -389,6 +418,7 @@ class OrderController extends Controller
     {
         return [
             ['value' => self::STATUS_OPEN, 'label' => 'Abiertos'],
+            ['value' => self::STATUS_IN_TRANSIT, 'label' => 'En la calle'],
             ...$this->statusOptions(),
         ];
     }

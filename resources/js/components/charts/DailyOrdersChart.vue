@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { Chart, registerables, type TooltipItem } from 'chart.js';
+import {
+    Chart,
+    registerables,
+    type ScriptableContext,
+    type TooltipItem,
+} from 'chart.js';
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import {
     longMonth,
@@ -66,6 +71,11 @@ function render(): void {
 
     const theme = chartTheme();
 
+    // Stagger each bar so the row draws itself in sequence, like the Chart.js
+    // "delay" sample. The step shrinks as bars multiply, so the whole sweep stays
+    // inside the same short window whatever the range.
+    const stagger = Math.min(60, Math.round(600 / (props.data.length || 1)));
+
     chart = new Chart(canvas.value, {
         type: 'bar',
         data: {
@@ -92,6 +102,15 @@ function render(): void {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: {
+                duration: 600,
+                easing: 'easeOutQuart',
+                // Only the first, full render staggers; hover and resize stay instant.
+                delay: (ctx: ScriptableContext<'bar'>): number =>
+                    ctx.type === 'data' && ctx.mode === 'default'
+                        ? ctx.dataIndex * stagger
+                        : 0,
+            },
             // Hovering anywhere in a column reads that column, which on a narrow bar
             // is the difference between a tooltip and a game of hit-the-pixel.
             interaction: { mode: 'index', intersect: false },

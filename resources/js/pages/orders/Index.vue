@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { reactive } from 'vue';
+import { reactive, ref, watch } from 'vue';
 import Datepicker from '@/components/Datepicker.vue';
 import Select from '@/components/Select.vue';
 import { money, paymentBadgeClass, statusBadgeClass } from '@/lib/format';
@@ -56,6 +56,8 @@ const props = defineProps<{
     paymentStatuses: Option[];
     paymentMethods: Option[];
     dateFields: Option[];
+    perPage: number;
+    perPageOptions: number[];
 }>();
 
 defineOptions({
@@ -80,17 +82,42 @@ const emptyFilters: Filters = {
 };
 
 const form = reactive<Filters>({ ...props.filters });
+const perPage = ref(String(props.perPage));
 
-function apply(): void {
+// The server owns the real page size; keep the selector in step when it answers —
+// e.g. clearing the filters resets it to the default.
+watch(
+    () => props.perPage,
+    (value) => {
+        perPage.value = String(value);
+    },
+);
+
+/**
+ * The active filters plus the page size, as query params. Empty filters drop out;
+ * the page size always rides along so filtering never silently resets it.
+ */
+function activeParams(): Record<string, string> {
     const params = Object.fromEntries(
         Object.entries(form).filter(([, value]) => value !== ''),
     );
 
-    router.get('/orders', params, {
+    params.per_page = perPage.value;
+
+    return params;
+}
+
+function apply(): void {
+    router.get('/orders', activeParams(), {
         preserveState: true,
         preserveScroll: true,
         replace: true,
     });
+}
+
+function changePageSize(value: string): void {
+    perPage.value = value;
+    apply();
 }
 
 function clear(): void {
@@ -260,21 +287,42 @@ function clear(): void {
             </table>
         </div>
 
-        <div v-if="orders.links.length > 3" class="flex flex-wrap gap-1">
-            <template v-for="(link, index) in orders.links" :key="index">
-                <Link
-                    v-if="link.url"
-                    :href="link.url"
-                    class="rounded-md border border-sidebar-border/70 px-3 py-1.5 text-sm dark:border-sidebar-border"
-                    :class="{ 'bg-primary text-primary-foreground': link.active }"
-                    v-html="link.label"
-                />
-                <span
-                    v-else
-                    class="rounded-md border border-sidebar-border/40 px-3 py-1.5 text-sm text-muted-foreground"
-                    v-html="link.label"
-                />
-            </template>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Mostrar</span>
+                <div class="w-24">
+                    <Select
+                        :model-value="perPage"
+                        @update:model-value="changePageSize"
+                    >
+                        <option
+                            v-for="size in perPageOptions"
+                            :key="size"
+                            :value="String(size)"
+                        >
+                            {{ size }}
+                        </option>
+                    </Select>
+                </div>
+                <span>por página</span>
+            </div>
+
+            <div v-if="orders.links.length > 3" class="flex flex-wrap gap-1">
+                <template v-for="(link, index) in orders.links" :key="index">
+                    <Link
+                        v-if="link.url"
+                        :href="link.url"
+                        class="rounded-md border border-sidebar-border/70 px-3 py-1.5 text-sm dark:border-sidebar-border"
+                        :class="{ 'bg-primary text-primary-foreground': link.active }"
+                        v-html="link.label"
+                    />
+                    <span
+                        v-else
+                        class="rounded-md border border-sidebar-border/40 px-3 py-1.5 text-sm text-muted-foreground"
+                        v-html="link.label"
+                    />
+                </template>
+            </div>
         </div>
     </div>
 </template>

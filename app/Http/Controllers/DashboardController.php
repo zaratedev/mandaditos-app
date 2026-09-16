@@ -9,6 +9,7 @@ use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -41,6 +42,12 @@ class DashboardController extends Controller
      * A range nobody can read is a range nobody asked for.
      */
     private const CHART_MAX_YEARS = 5;
+
+    /**
+     * Past this many hours an open order has been sitting long enough that the admin
+     * should look at it before a client complains.
+     */
+    private const STALE_HOURS = 2;
 
     /**
      * How close each open status is to delivery. Higher wins when picking what the
@@ -109,6 +116,15 @@ class DashboardController extends Controller
                 ->count(),
         ];
 
+        // What is waiting on the admin, not on the courier: orders with nobody assigned
+        // yet, and open orders that have been sitting too long.
+        $attention = [
+            'unassigned' => Order::query()->open()->whereNull('courier_id')->count(),
+            'stale' => Order::query()->open()
+                ->where('created_at', '<=', now()->subHours(self::STALE_HOURS))
+                ->count(),
+        ];
+
         [$corte, $corteTotals] = $this->dailyCashCut($today);
 
         return Inertia::render('Dashboard', [
@@ -118,6 +134,15 @@ class DashboardController extends Controller
             // that counted them.
             'today' => $today->toDateString(),
             'stats' => $stats,
+            'attention' => $attention,
+            'staleHours' => self::STALE_HOURS,
+            // The money three ways: what the business earned today, what it is owed,
+            // and what is still riding around with the couriers.
+            'finance' => [
+                'commissionToday' => $corteTotals['commission'],
+                'receivable' => $this->receivable($today),
+                'inTheStreet' => $this->inTheStreet(),
+            ],
             'openByStatus' => $openByStatus,
             'ordersChart' => $this->ordersChart($request, $today),
             'corte' => $corte,
@@ -282,6 +307,54 @@ class DashboardController extends Controller
                 ->implode(', '),
             'next_status' => $step['status'] ?? null,
             'next_label' => $step['label'] ?? null,
+        ];
+    }
+
+    /**
+     * Money already earned and still outside the cash box: orders delivered but not
+     * paid for. It ignores any date window on purpose — a debt does not age out — and
+     * reports how old the oldest one is so a debt left sitting stands out.
+     *
+     * @return array{orders: int, amount: float, oldestDays: int|null}
+     */
+    private function receivable(CarbonInterface $today): array
+    {
+        $row = Order::query()
+            ->where('status', OrderStatus::Delivered->value)
+            ->where('payment_status', PaymentStatus::Pending->value)
+            ->selectRaw('COUNT(*) as orders_count')
+            ->selectRaw('COALESCE(SUM(total), 0) as amount')
+            ->selectRaw('MIN(delivered_at) as oldest')
+            ->toBase()
+            ->first();
+
+        return [
+            'orders' => (int) ($row->orders_count ?? 0),
+            'amount' => round((float) ($row->amount ?? 0), 2),
+            'oldestDays' => $row?->oldest === null
+                ? null
+                : (int) CarbonImmutable::parse($row->oldest)->startOfDay()->diffInDays($today->startOfDay()),
+        ];
+    }
+
+    /**
+     * The value of orders already bought and on their way but not yet paid: the
+     * business's money the couriers are carrying right now.
+     *
+     * @return array{orders: int, amount: float}
+     */
+    private function inTheStreet(): array
+    {
+        $row = Order::query()
+            ->whereIn('status', [OrderStatus::Purchased->value, OrderStatus::OnTheWay->value])
+            ->selectRaw('COUNT(*) as orders_count')
+            ->selectRaw('COALESCE(SUM(total), 0) as amount')
+            ->toBase()
+            ->first();
+
+        return [
+            'orders' => (int) ($row->orders_count ?? 0),
+            'amount' => round((float) ($row->amount ?? 0), 2),
         ];
     }
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { onClickOutside } from '@vueuse/core';
 import { computed, reactive, ref, watch } from 'vue';
 import DailyOrdersChart from '@/components/charts/DailyOrdersChart.vue';
 import StatusBars from '@/components/charts/StatusBars.vue';
@@ -35,6 +36,12 @@ interface CorteRow {
     orders: number;
 }
 
+interface Finance {
+    commissionToday: number;
+    receivable: { orders: number; amount: number; oldestDays: number | null };
+    inTheStreet: { orders: number; amount: number };
+}
+
 interface NextOrder {
     id: number;
     client: string | null;
@@ -53,6 +60,9 @@ const props = defineProps<{
         deliveredToday: number;
         unpaidDelivered: number;
     };
+    attention?: { unassigned: number; stale: number };
+    staleHours?: number;
+    finance?: Finance;
     openByStatus?: StatusRow[];
     ordersChart?: OrdersChart;
     corte?: CorteRow[];
@@ -108,6 +118,9 @@ const statLinks = computed(() => {
             status: 'delivered',
             payment_status: 'pending',
         }),
+        inTransit: ordersUrl({ status: 'in_transit' }),
+        unassigned: ordersUrl({ status: 'open', courier_id: 'unassigned' }),
+        commissionToday: `/reports?${new URLSearchParams({ from: day, to: day }).toString()}`,
     };
 });
 
@@ -122,6 +135,14 @@ const periodOptions = [
 ];
 
 const period = ref(props.ordersChart?.period ?? 'day');
+
+// The custom range lives in a floating panel that the "Personalizado" button opens.
+const customOpen = ref(false);
+const customRoot = ref<HTMLElement | null>(null);
+
+onClickOutside(customRoot, () => {
+    customOpen.value = false;
+});
 
 const range = reactive({
     from: props.ordersChart?.from ?? '',
@@ -148,6 +169,21 @@ function reloadChart(): void {
 }
 
 function selectPeriod(value: string): void {
+    if (value === 'custom') {
+        // The same click that picks "Personalizado" drops the range picker open as a
+        // floating panel; clicking it again while already custom just toggles it.
+        const wasCustom = period.value === 'custom';
+        period.value = 'custom';
+        customOpen.value = wasCustom ? !customOpen.value : true;
+
+        if (!wasCustom) {
+            reloadChart();
+        }
+
+        return;
+    }
+
+    customOpen.value = false;
     period.value = value;
     reloadChart();
 }
@@ -211,48 +247,146 @@ function openChartPoint(date: string): void {
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <template v-if="isAdmin">
-            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <Link
-                    :href="statLinks.today"
-                    class="border-sidebar-border/70 hover:bg-muted/50 dark:border-sidebar-border rounded-xl border p-4 transition"
+            <section>
+                <h2
+                    class="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase"
                 >
-                    <p class="text-muted-foreground text-sm">Pedidos hoy</p>
-                    <p class="mt-1 text-3xl font-semibold">
-                        {{ stats?.today ?? 0 }}
-                    </p>
-                </Link>
-                <Link
-                    :href="statLinks.open"
-                    class="border-sidebar-border/70 hover:bg-muted/50 dark:border-sidebar-border rounded-xl border p-4 transition"
+                    Dinero
+                </h2>
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <Link
+                        :href="statLinks.commissionToday"
+                        class="border-sidebar-border/70 hover:bg-muted/50 dark:border-sidebar-border rounded-xl border p-4 transition"
+                    >
+                        <p class="text-muted-foreground text-sm">
+                            Comisión de hoy
+                        </p>
+                        <p class="mt-1 text-3xl font-semibold">
+                            {{ money(finance?.commissionToday) }}
+                        </p>
+                        <p class="text-muted-foreground mt-1 text-xs">
+                            Lo que el negocio ganó hoy
+                        </p>
+                    </Link>
+                    <Link
+                        :href="statLinks.unpaidDelivered"
+                        class="border-sidebar-border/70 hover:bg-muted/50 dark:border-sidebar-border rounded-xl border p-4 transition"
+                    >
+                        <p class="text-muted-foreground text-sm">Por cobrar</p>
+                        <p class="mt-1 text-3xl font-semibold">
+                            {{ money(finance?.receivable.amount) }}
+                        </p>
+                        <p class="text-muted-foreground mt-1 text-xs">
+                            {{ finance?.receivable.orders ?? 0 }} pedido(s)<template
+                                v-if="
+                                    (finance?.receivable.oldestDays ?? null) !==
+                                    null
+                                "
+                            >
+                                · el más viejo hace
+                                {{ finance?.receivable.oldestDays }} d</template
+                            >
+                        </p>
+                    </Link>
+                    <Link
+                        :href="statLinks.inTransit"
+                        class="border-sidebar-border/70 hover:bg-muted/50 dark:border-sidebar-border rounded-xl border p-4 transition"
+                    >
+                        <p class="text-muted-foreground text-sm">En la calle</p>
+                        <p class="mt-1 text-3xl font-semibold">
+                            {{ money(finance?.inTheStreet.amount) }}
+                        </p>
+                        <p class="text-muted-foreground mt-1 text-xs">
+                            {{ finance?.inTheStreet.orders ?? 0 }} pedido(s)
+                            comprados, en camino
+                        </p>
+                    </Link>
+                </div>
+            </section>
+
+            <section>
+                <h2
+                    class="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase"
                 >
-                    <p class="text-muted-foreground text-sm">
-                        Pedidos abiertos
-                    </p>
-                    <p class="mt-1 text-3xl font-semibold">
-                        {{ stats?.open ?? 0 }}
-                    </p>
-                </Link>
-                <Link
-                    :href="statLinks.deliveredToday"
-                    class="border-sidebar-border/70 hover:bg-muted/50 dark:border-sidebar-border rounded-xl border p-4 transition"
+                    Requiere tu atención
+                </h2>
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <Link
+                        :href="statLinks.unassigned"
+                        class="border-sidebar-border/70 hover:bg-muted/50 dark:border-sidebar-border rounded-xl border p-4 transition"
+                    >
+                        <p class="text-muted-foreground text-sm">
+                            Sin repartidor
+                        </p>
+                        <p class="mt-1 text-3xl font-semibold">
+                            {{ attention?.unassigned ?? 0 }}
+                        </p>
+                    </Link>
+                    <Link
+                        :href="statLinks.open"
+                        class="border-sidebar-border/70 hover:bg-muted/50 dark:border-sidebar-border rounded-xl border p-4 transition"
+                    >
+                        <p class="text-muted-foreground text-sm">
+                            Lleva +{{ staleHours ?? 2 }} h abierto
+                        </p>
+                        <p class="mt-1 text-3xl font-semibold">
+                            {{ attention?.stale ?? 0 }}
+                        </p>
+                    </Link>
+                    <Link
+                        :href="statLinks.unpaidDelivered"
+                        class="border-sidebar-border/70 hover:bg-muted/50 dark:border-sidebar-border rounded-xl border p-4 transition"
+                    >
+                        <p class="text-muted-foreground text-sm">
+                            Entregados sin pagar
+                        </p>
+                        <p class="mt-1 text-3xl font-semibold">
+                            {{ stats?.unpaidDelivered ?? 0 }}
+                        </p>
+                    </Link>
+                </div>
+            </section>
+
+            <section>
+                <h2
+                    class="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase"
                 >
-                    <p class="text-muted-foreground text-sm">Entregados hoy</p>
-                    <p class="mt-1 text-3xl font-semibold">
-                        {{ stats?.deliveredToday ?? 0 }}
-                    </p>
-                </Link>
-                <Link
-                    :href="statLinks.unpaidDelivered"
-                    class="border-sidebar-border/70 hover:bg-muted/50 dark:border-sidebar-border rounded-xl border p-4 transition"
-                >
-                    <p class="text-muted-foreground text-sm">
-                        Entregados sin pagar
-                    </p>
-                    <p class="mt-1 text-3xl font-semibold">
-                        {{ stats?.unpaidDelivered ?? 0 }}
-                    </p>
-                </Link>
-            </div>
+                    Hoy
+                </h2>
+                <div class="grid gap-4 sm:grid-cols-3">
+                    <Link
+                        :href="statLinks.today"
+                        class="border-sidebar-border/70 hover:bg-muted/50 dark:border-sidebar-border rounded-xl border p-4 transition"
+                    >
+                        <p class="text-muted-foreground text-sm">Pedidos hoy</p>
+                        <p class="mt-1 text-3xl font-semibold">
+                            {{ stats?.today ?? 0 }}
+                        </p>
+                    </Link>
+                    <Link
+                        :href="statLinks.open"
+                        class="border-sidebar-border/70 hover:bg-muted/50 dark:border-sidebar-border rounded-xl border p-4 transition"
+                    >
+                        <p class="text-muted-foreground text-sm">
+                            Pedidos abiertos
+                        </p>
+                        <p class="mt-1 text-3xl font-semibold">
+                            {{ stats?.open ?? 0 }}
+                        </p>
+                    </Link>
+                    <Link
+                        :href="statLinks.deliveredToday"
+                        class="border-sidebar-border/70 hover:bg-muted/50 dark:border-sidebar-border rounded-xl border p-4 transition"
+                    >
+                        <p class="text-muted-foreground text-sm">
+                            Entregados hoy
+                        </p>
+                        <p class="mt-1 text-3xl font-semibold">
+                            {{ stats?.deliveredToday ?? 0 }}
+                        </p>
+                    </Link>
+                </div>
+            </section>
 
             <div class="grid gap-6 lg:grid-cols-3">
                 <div
@@ -270,7 +404,10 @@ function openChartPoint(date: string): void {
                             </p>
                         </div>
 
-                        <div class="flex flex-wrap items-center gap-2">
+                        <div
+                            ref="customRoot"
+                            class="relative flex flex-wrap items-center gap-2"
+                        >
                             <div
                                 class="border-sidebar-border/70 dark:border-sidebar-border flex rounded-lg border p-0.5"
                             >
@@ -290,26 +427,40 @@ function openChartPoint(date: string): void {
                                 </button>
                             </div>
 
-                            <template v-if="period === 'custom'">
-                                <div class="w-36">
-                                    <Datepicker
-                                        :model-value="range.from"
-                                        placeholder="Desde"
-                                        @update:model-value="
-                                            (value) => setRange('from', value)
-                                        "
-                                    />
+                            <div
+                                v-if="customOpen"
+                                class="border-sidebar-border/70 dark:border-sidebar-border absolute top-full right-0 z-50 mt-2 w-64 rounded-lg border bg-background p-3 shadow-md"
+                            >
+                                <div class="grid gap-2">
+                                    <div class="grid gap-1">
+                                        <label
+                                            class="text-muted-foreground text-xs"
+                                            >Desde</label
+                                        >
+                                        <Datepicker
+                                            :model-value="range.from"
+                                            placeholder="Desde"
+                                            @update:model-value="
+                                                (value) =>
+                                                    setRange('from', value)
+                                            "
+                                        />
+                                    </div>
+                                    <div class="grid gap-1">
+                                        <label
+                                            class="text-muted-foreground text-xs"
+                                            >Hasta</label
+                                        >
+                                        <Datepicker
+                                            :model-value="range.to"
+                                            placeholder="Hasta"
+                                            @update:model-value="
+                                                (value) => setRange('to', value)
+                                            "
+                                        />
+                                    </div>
                                 </div>
-                                <div class="w-36">
-                                    <Datepicker
-                                        :model-value="range.to"
-                                        placeholder="Hasta"
-                                        @update:model-value="
-                                            (value) => setRange('to', value)
-                                        "
-                                    />
-                                </div>
-                            </template>
+                            </div>
                         </div>
                     </div>
 

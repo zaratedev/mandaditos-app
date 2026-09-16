@@ -23,6 +23,7 @@ const root = ref<HTMLElement | null>(null);
 
 onClickOutside(root, () => {
     open.value = false;
+    view.value = 'days';
 });
 
 function parseISO(value: string): Date | null {
@@ -51,6 +52,10 @@ const selected = computed<Date | null>(() => parseISO(props.modelValue));
 
 const viewDate = ref<Date>(selected.value ?? new Date());
 
+// The calendar has two faces: the day grid, and a month grid for jumping across
+// the year without stepping one month at a time. It always opens on the days.
+const view = ref<'days' | 'months'>('days');
+
 watch(
     () => props.modelValue,
     (value) => {
@@ -66,7 +71,11 @@ const monthLabel = computed<string>(() =>
     new Intl.DateTimeFormat('es-MX', { month: 'long', year: 'numeric' }).format(viewDate.value),
 );
 
+const yearLabel = computed<string>(() => String(viewDate.value.getFullYear()));
+
 const weekdays = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
+
+const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
 const days = computed<Date[]>(() => {
     const year = viewDate.value.getFullYear();
@@ -108,11 +117,13 @@ function inCurrentMonth(date: Date): boolean {
 function selectDay(date: Date): void {
     emit('update:modelValue', toISO(date));
     open.value = false;
+    view.value = 'days';
 }
 
 function clear(): void {
     emit('update:modelValue', '');
     open.value = false;
+    view.value = 'days';
 }
 
 function prevMonth(): void {
@@ -122,6 +133,47 @@ function prevMonth(): void {
 function nextMonth(): void {
     viewDate.value = new Date(viewDate.value.getFullYear(), viewDate.value.getMonth() + 1, 1);
 }
+
+function prevYear(): void {
+    viewDate.value = new Date(viewDate.value.getFullYear() - 1, viewDate.value.getMonth(), 1);
+}
+
+function nextYear(): void {
+    viewDate.value = new Date(viewDate.value.getFullYear() + 1, viewDate.value.getMonth(), 1);
+}
+
+// One pair of chevrons serves both faces: months on the day grid, years on the
+// month grid.
+function goPrev(): void {
+    view.value === 'days' ? prevMonth() : prevYear();
+}
+
+function goNext(): void {
+    view.value === 'days' ? nextMonth() : nextYear();
+}
+
+function selectMonth(month: number): void {
+    viewDate.value = new Date(viewDate.value.getFullYear(), month, 1);
+    view.value = 'days';
+}
+
+function isSelectedMonth(month: number): boolean {
+    const date = selected.value;
+
+    return (
+        date !== null &&
+        date.getFullYear() === viewDate.value.getFullYear() &&
+        date.getMonth() === month
+    );
+}
+
+function toggleOpen(): void {
+    open.value = !open.value;
+
+    if (open.value) {
+        view.value = 'days';
+    }
+}
 </script>
 
 <template>
@@ -130,7 +182,7 @@ function nextMonth(): void {
             :id="id"
             type="button"
             class="flex h-9 w-full items-center gap-2 rounded-md border border-input bg-transparent px-3 text-left text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-            @click="open = !open"
+            @click="toggleOpen"
         >
             <CalendarDays class="size-4 shrink-0 text-muted-foreground" />
             <span :class="selected ? '' : 'text-muted-foreground'">{{ displayValue }}</span>
@@ -144,42 +196,78 @@ function nextMonth(): void {
                 <button
                     type="button"
                     class="inline-flex size-7 items-center justify-center rounded-md hover:bg-muted"
-                    aria-label="Mes anterior"
-                    @click="prevMonth"
+                    :aria-label="view === 'days' ? 'Mes anterior' : 'Año anterior'"
+                    @click="goPrev"
                 >
                     <ChevronLeft class="size-4" />
                 </button>
-                <span class="text-sm font-medium capitalize">{{ monthLabel }}</span>
+                <button
+                    v-if="view === 'days'"
+                    type="button"
+                    class="rounded-md px-2 py-1 text-sm font-medium capitalize hover:bg-muted"
+                    aria-label="Elegir mes"
+                    @click="view = 'months'"
+                >
+                    {{ monthLabel }}
+                </button>
+                <button
+                    v-else
+                    type="button"
+                    class="rounded-md px-2 py-1 text-sm font-medium hover:bg-muted"
+                    aria-label="Volver a los días"
+                    @click="view = 'days'"
+                >
+                    {{ yearLabel }}
+                </button>
                 <button
                     type="button"
                     class="inline-flex size-7 items-center justify-center rounded-md hover:bg-muted"
-                    aria-label="Mes siguiente"
-                    @click="nextMonth"
+                    :aria-label="view === 'days' ? 'Mes siguiente' : 'Año siguiente'"
+                    @click="goNext"
                 >
                     <ChevronRight class="size-4" />
                 </button>
             </div>
 
-            <div class="mb-1 grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">
-                <span v-for="weekday in weekdays" :key="weekday">{{ weekday }}</span>
-            </div>
+            <template v-if="view === 'days'">
+                <div class="mb-1 grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">
+                    <span v-for="weekday in weekdays" :key="weekday">{{ weekday }}</span>
+                </div>
 
-            <div class="grid grid-cols-7 gap-1">
+                <div class="grid grid-cols-7 gap-1">
+                    <button
+                        v-for="day in days"
+                        :key="toISO(day)"
+                        type="button"
+                        class="inline-flex size-8 items-center justify-center rounded-md text-sm hover:bg-muted"
+                        :class="[
+                            inCurrentMonth(day) ? '' : 'text-muted-foreground/40',
+                            isSameDay(day, selected)
+                                ? 'bg-primary text-primary-foreground hover:bg-primary hover:opacity-90'
+                                : '',
+                            isToday(day) && !isSameDay(day, selected) ? 'font-semibold text-primary-strong' : '',
+                        ]"
+                        @click="selectDay(day)"
+                    >
+                        {{ day.getDate() }}
+                    </button>
+                </div>
+            </template>
+
+            <div v-else class="grid grid-cols-3 gap-1">
                 <button
-                    v-for="day in days"
-                    :key="toISO(day)"
+                    v-for="(name, index) in months"
+                    :key="name"
                     type="button"
-                    class="inline-flex size-8 items-center justify-center rounded-md text-sm hover:bg-muted"
-                    :class="[
-                        inCurrentMonth(day) ? '' : 'text-muted-foreground/40',
-                        isSameDay(day, selected)
+                    class="inline-flex items-center justify-center rounded-md py-2 text-sm hover:bg-muted"
+                    :class="
+                        isSelectedMonth(index)
                             ? 'bg-primary text-primary-foreground hover:bg-primary hover:opacity-90'
-                            : '',
-                        isToday(day) && !isSameDay(day, selected) ? 'font-semibold text-primary-strong' : '',
-                    ]"
-                    @click="selectDay(day)"
+                            : ''
+                    "
+                    @click="selectMonth(index)"
                 >
-                    {{ day.getDate() }}
+                    {{ name }}
                 </button>
             </div>
 
