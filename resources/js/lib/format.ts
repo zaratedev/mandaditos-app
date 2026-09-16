@@ -44,6 +44,24 @@ export function shortDayMonth(value: string | null | undefined): string {
     return month && day ? `${day}/${month}` : value;
 }
 
+/**
+ * Minutes as a person says them: 45 min, 1 h 20 min, 2 h.
+ */
+export function duration(minutes: number | null | undefined): string {
+    if (minutes === null || minutes === undefined) {
+        return '—';
+    }
+
+    if (minutes < 60) {
+        return `${Math.round(minutes)} min`;
+    }
+
+    const hours = Math.floor(minutes / 60);
+    const rest = Math.round(minutes % 60);
+
+    return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
+}
+
 const shortMonthFormatter = new Intl.DateTimeFormat('es-MX', {
     month: 'short',
     year: '2-digit',

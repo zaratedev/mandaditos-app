@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
+import DailyOrdersChart from '@/components/charts/DailyOrdersChart.vue';
 import Datepicker from '@/components/Datepicker.vue';
-import { money, shortDate } from '@/lib/format';
+import { duration, money, shortDate } from '@/lib/format';
 
 interface DayRow {
-    day: string;
+    date: string;
     orders: number;
     revenue: number;
 }
@@ -14,14 +15,23 @@ interface CourierRow {
     courier: string;
     orders: number;
     delivered: number;
-    revenue: number;
     commission: number;
+    moved: number;
+    average: number | null;
+}
+
+interface ClientRow {
+    client: string;
+    orders: number;
+    commission: number;
+    moved: number;
+    last: string;
 }
 
 interface MethodRow {
     method: string;
     orders: number;
-    revenue: number;
+    amount: number;
 }
 
 interface ProductRow {
@@ -32,11 +42,42 @@ interface ProductRow {
 }
 
 const props = defineProps<{
-    filters: { from: string; to: string };
-    summary: { orders: number; delivered: number; cancelled: number; unpaid: number };
-    totals: { revenue: number; commission: number; cash: number; transfer: number; paidOrders: number };
+    filters: { from: string; to: string; days: number };
+    collected: {
+        orders: number;
+        commission: number;
+        moved: number;
+        cash: number;
+        transfer: number;
+        ticket: number;
+        fee: number;
+    };
+    operations: {
+        orders: number;
+        delivered: number;
+        cancelled: number;
+        perDay: number;
+    };
+    change: {
+        commission: number | null;
+        moved: number | null;
+        orders: number | null;
+        delivered: number | null;
+    };
+    receivable: {
+        orders: number;
+        amount: number;
+        commission: number;
+        oldest: string | null;
+    };
+    delivery: {
+        orders: number;
+        average: number | null;
+        slowest: number | null;
+    };
     perDay: DayRow[];
     perCourier: CourierRow[];
+    perClient: ClientRow[];
     perMethod: MethodRow[];
     topProducts: ProductRow[];
 }>();
@@ -58,9 +99,27 @@ function apply(): void {
     );
 }
 
-const maxDayOrders = computed<number>(() =>
-    Math.max(1, ...props.perDay.map((day) => day.orders)),
-);
+/**
+ * The arrow carries the direction and the sign carries it again, so the colour is
+ * never the only thing saying whether a number went the right way.
+ */
+function trend(value: number | null): string {
+    if (value === null) {
+        return '';
+    }
+
+    return `${value >= 0 ? '▲' : '▼'} ${Math.abs(value).toFixed(1)}%`;
+}
+
+function trendClass(value: number | null): string {
+    if (value === null) {
+        return '';
+    }
+
+    return value >= 0
+        ? 'text-green-700 dark:text-green-300'
+        : 'text-red-700 dark:text-red-300';
+}
 </script>
 
 <template>
@@ -69,108 +128,302 @@ const maxDayOrders = computed<number>(() =>
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex flex-wrap items-end justify-between gap-3">
             <h1 class="text-xl font-semibold">Reportes</h1>
-            <form class="flex flex-wrap items-end gap-2" @submit.prevent="apply">
+
+            <form
+                class="flex flex-wrap items-end gap-2"
+                @submit.prevent="apply"
+            >
                 <div class="grid gap-1">
-                    <label class="text-xs text-muted-foreground">Desde</label>
+                    <label class="text-muted-foreground text-xs">Desde</label>
                     <Datepicker v-model="from" placeholder="Desde" />
                 </div>
                 <div class="grid gap-1">
-                    <label class="text-xs text-muted-foreground">Hasta</label>
+                    <label class="text-muted-foreground text-xs">Hasta</label>
                     <Datepicker v-model="to" placeholder="Hasta" />
                 </div>
                 <button
                     type="submit"
-                    class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+                    class="bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90"
                 >
                     Aplicar
                 </button>
             </form>
         </div>
 
-        <!-- Resumen -->
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                <p class="text-sm text-muted-foreground">Pedidos</p>
-                <p class="mt-1 text-3xl font-semibold">{{ summary.orders }}</p>
-            </div>
-            <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                <p class="text-sm text-muted-foreground">Entregados</p>
-                <p class="mt-1 text-3xl font-semibold">{{ summary.delivered }}</p>
-            </div>
-            <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                <p class="text-sm text-muted-foreground">Cancelados</p>
-                <p class="mt-1 text-3xl font-semibold">{{ summary.cancelled }}</p>
-            </div>
-            <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                <p class="text-sm text-muted-foreground">Pendientes de pago</p>
-                <p class="mt-1 text-3xl font-semibold">{{ summary.unpaid }}</p>
+        <!-- Dinero -->
+        <div>
+            <p class="text-muted-foreground mb-2 text-xs">
+                Cobrado entre el {{ shortDate(filters.from) }} y el
+                {{ shortDate(filters.to) }}, comparado con los
+                {{ filters.days }} días anteriores.
+            </p>
+
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div
+                    class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4"
+                >
+                    <p class="text-muted-foreground text-sm">
+                        Comisiones cobradas
+                    </p>
+                    <p class="mt-1 text-3xl font-semibold">
+                        {{ money(collected.commission) }}
+                    </p>
+                    <p
+                        class="mt-1 min-h-4 text-xs"
+                        :class="trendClass(change.commission)"
+                    >
+                        {{ trend(change.commission) }}
+                    </p>
+                    <p class="text-muted-foreground mt-1 text-xs">
+                        {{ money(collected.fee) }} por pedido ·
+                        {{ collected.orders }} pagos
+                    </p>
+                </div>
+
+                <div
+                    class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4"
+                >
+                    <p class="text-muted-foreground text-sm">Dinero movido</p>
+                    <p class="mt-1 text-3xl font-semibold">
+                        {{ money(collected.moved) }}
+                    </p>
+                    <p
+                        class="mt-1 min-h-4 text-xs"
+                        :class="trendClass(change.moved)"
+                    >
+                        {{ trend(change.moved) }}
+                    </p>
+                    <p class="text-muted-foreground mt-1 text-xs">
+                        Incluye el gasto del cliente · Efectivo
+                        {{ money(collected.cash) }} · Transferencia
+                        {{ money(collected.transfer) }}
+                    </p>
+                </div>
+
+                <div
+                    class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4"
+                >
+                    <p class="text-muted-foreground text-sm">
+                        Por cobrar (a hoy)
+                    </p>
+                    <p class="mt-1 text-3xl font-semibold">
+                        {{ money(receivable.amount) }}
+                    </p>
+                    <p class="text-muted-foreground mt-1 text-xs">
+                        {{ receivable.orders }} entrega(s) sin pago ·
+                        {{ money(receivable.commission) }} de comisión
+                    </p>
+                    <p
+                        v-if="receivable.oldest"
+                        class="text-muted-foreground mt-1 text-xs"
+                    >
+                        La más vieja: {{ shortDate(receivable.oldest) }}
+                    </p>
+                </div>
+
+                <div
+                    class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4"
+                >
+                    <p class="text-muted-foreground text-sm">Ticket promedio</p>
+                    <p class="mt-1 text-3xl font-semibold">
+                        {{ money(collected.ticket) }}
+                    </p>
+                    <p class="text-muted-foreground mt-1 text-xs">
+                        {{ operations.perDay }} pedidos por día en el periodo
+                    </p>
+                </div>
             </div>
         </div>
 
-        <!-- Dinero -->
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                <p class="text-sm text-muted-foreground">Total cobrado</p>
-                <p class="mt-1 text-2xl font-semibold">{{ money(totals.revenue) }}</p>
-            </div>
-            <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                <p class="text-sm text-muted-foreground">Comisiones</p>
-                <p class="mt-1 text-2xl font-semibold">{{ money(totals.commission) }}</p>
-            </div>
-            <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                <p class="text-sm text-muted-foreground">Efectivo</p>
-                <p class="mt-1 text-2xl font-semibold">{{ money(totals.cash) }}</p>
-            </div>
-            <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                <p class="text-sm text-muted-foreground">Transferencia</p>
-                <p class="mt-1 text-2xl font-semibold">{{ money(totals.transfer) }}</p>
+        <!-- Operación -->
+        <div>
+            <p class="text-muted-foreground mb-2 text-xs">
+                Pedidos creados entre el {{ shortDate(filters.from) }} y el
+                {{ shortDate(filters.to) }}.
+            </p>
+
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div
+                    class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4"
+                >
+                    <p class="text-muted-foreground text-sm">Pedidos</p>
+                    <p class="mt-1 text-3xl font-semibold">
+                        {{ operations.orders }}
+                    </p>
+                    <p
+                        class="mt-1 min-h-4 text-xs"
+                        :class="trendClass(change.orders)"
+                    >
+                        {{ trend(change.orders) }}
+                    </p>
+                </div>
+                <div
+                    class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4"
+                >
+                    <p class="text-muted-foreground text-sm">Entregados</p>
+                    <p class="mt-1 text-3xl font-semibold">
+                        {{ operations.delivered }}
+                    </p>
+                    <p
+                        class="mt-1 min-h-4 text-xs"
+                        :class="trendClass(change.delivered)"
+                    >
+                        {{ trend(change.delivered) }}
+                    </p>
+                </div>
+                <div
+                    class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4"
+                >
+                    <p class="text-muted-foreground text-sm">Cancelados</p>
+                    <p class="mt-1 text-3xl font-semibold">
+                        {{ operations.cancelled }}
+                    </p>
+                </div>
+                <div
+                    class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4"
+                >
+                    <p class="text-muted-foreground text-sm">
+                        Tiempo de entrega
+                    </p>
+                    <p class="mt-1 text-3xl font-semibold">
+                        {{ duration(delivery.average) }}
+                    </p>
+                    <p class="text-muted-foreground mt-1 text-xs">
+                        Promedio de {{ delivery.orders }} entrega(s) · la más
+                        lenta {{ duration(delivery.slowest) }}
+                    </p>
+                </div>
             </div>
         </div>
-        <p class="-mt-2 text-xs text-muted-foreground">
-            Los montos consideran los {{ totals.paidOrders }} pedidos pagados del periodo.
-        </p>
 
         <div class="grid gap-6 lg:grid-cols-2">
             <!-- Pedidos por día -->
-            <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                <h2 class="mb-3 text-base font-semibold">Pedidos por día</h2>
-                <div v-if="perDay.length === 0" class="py-6 text-center text-sm text-muted-foreground">
+            <div
+                class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4"
+            >
+                <h2 class="text-base font-semibold">Pedidos por día</h2>
+                <p class="text-muted-foreground mb-3 text-xs">
+                    Por fecha de creación
+                </p>
+                <div
+                    v-if="perDay.length === 0"
+                    class="text-muted-foreground py-6 text-center text-sm"
+                >
                     Sin pedidos en el periodo.
                 </div>
-                <ul v-else class="space-y-2">
-                    <li v-for="day in perDay" :key="day.day" class="flex items-center gap-3 text-sm">
-                        <span class="w-24 shrink-0 text-muted-foreground">{{ shortDate(day.day) }}</span>
-                        <span class="flex-1">
-                            <span
-                                class="inline-block h-3 rounded bg-primary/70"
-                                :style="{ width: `${Math.max(6, (day.orders / maxDayOrders) * 100)}%` }"
-                            ></span>
-                        </span>
-                        <span class="w-8 shrink-0 text-right font-medium">{{ day.orders }}</span>
-                        <span class="w-24 shrink-0 text-right text-muted-foreground">{{ money(day.revenue) }}</span>
-                    </li>
-                </ul>
+                <DailyOrdersChart
+                    v-else
+                    :data="perDay"
+                    unit="day"
+                    revenue-label="Comisiones"
+                />
             </div>
 
             <!-- Por método de pago -->
-            <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                <h2 class="mb-3 text-base font-semibold">Por método de pago</h2>
+            <div
+                class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4"
+            >
+                <h2 class="text-base font-semibold">Por método de pago</h2>
+                <p class="text-muted-foreground mb-3 text-xs">
+                    De lo cobrado en el periodo
+                </p>
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-sidebar-border/70 text-left text-muted-foreground dark:border-sidebar-border">
+                        <tr
+                            class="border-sidebar-border/70 text-muted-foreground dark:border-sidebar-border border-b text-left"
+                        >
                             <th class="py-2 pr-4 font-medium">Método</th>
-                            <th class="py-2 pr-4 text-right font-medium">Pedidos</th>
+                            <th class="py-2 pr-4 text-right font-medium">
+                                Pedidos
+                            </th>
                             <th class="py-2 text-right font-medium">Total</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="row in perMethod" :key="row.method" class="border-b border-sidebar-border/40 dark:border-sidebar-border/60">
+                        <tr
+                            v-for="row in perMethod"
+                            :key="row.method"
+                            class="border-sidebar-border/40 dark:border-sidebar-border/60 border-b"
+                        >
                             <td class="py-2 pr-4">{{ row.method }}</td>
-                            <td class="py-2 pr-4 text-right">{{ row.orders }}</td>
-                            <td class="py-2 text-right">{{ money(row.revenue) }}</td>
+                            <td class="py-2 pr-4 text-right">
+                                {{ row.orders }}
+                            </td>
+                            <td class="py-2 text-right">
+                                {{ money(row.amount) }}
+                            </td>
                         </tr>
                         <tr v-if="perMethod.length === 0">
-                            <td colspan="3" class="py-6 text-center text-muted-foreground">Sin pagos en el periodo.</td>
+                            <td
+                                colspan="3"
+                                class="text-muted-foreground py-6 text-center"
+                            >
+                                Sin cobros en el periodo.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Mejores clientes -->
+        <div
+            class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4"
+        >
+            <h2 class="text-base font-semibold">Mejores clientes</h2>
+            <p class="text-muted-foreground mb-3 text-xs">
+                Los 10 que más comisiones dejaron en el periodo
+            </p>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr
+                            class="border-sidebar-border/70 text-muted-foreground dark:border-sidebar-border border-b text-left"
+                        >
+                            <th class="py-2 pr-4 font-medium">Cliente</th>
+                            <th class="py-2 pr-4 text-right font-medium">
+                                Pedidos
+                            </th>
+                            <th class="py-2 pr-4 text-right font-medium">
+                                Comisiones
+                            </th>
+                            <th class="py-2 pr-4 text-right font-medium">
+                                Dinero movido
+                            </th>
+                            <th class="py-2 text-right font-medium">
+                                Último pedido
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="row in perClient"
+                            :key="row.client"
+                            class="border-sidebar-border/40 dark:border-sidebar-border/60 border-b"
+                        >
+                            <td class="py-2 pr-4">{{ row.client }}</td>
+                            <td class="py-2 pr-4 text-right">
+                                {{ row.orders }}
+                            </td>
+                            <td class="py-2 pr-4 text-right font-medium">
+                                {{ money(row.commission) }}
+                            </td>
+                            <td
+                                class="text-muted-foreground py-2 pr-4 text-right"
+                            >
+                                {{ money(row.moved) }}
+                            </td>
+                            <td class="text-muted-foreground py-2 text-right">
+                                {{ shortDate(row.last) }}
+                            </td>
+                        </tr>
+                        <tr v-if="perClient.length === 0">
+                            <td
+                                colspan="5"
+                                class="text-muted-foreground py-6 text-center"
+                            >
+                                Sin clientes con pedidos en el periodo.
+                            </td>
                         </tr>
                     </tbody>
                 </table>
@@ -178,29 +431,67 @@ const maxDayOrders = computed<number>(() =>
         </div>
 
         <!-- Por repartidor -->
-        <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-            <h2 class="mb-3 text-base font-semibold">Desempeño por repartidor</h2>
+        <div
+            class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4"
+        >
+            <h2 class="text-base font-semibold">Desempeño por repartidor</h2>
+            <p class="text-muted-foreground mb-3 text-xs">
+                Ordenado por las comisiones que generaron sus entregas
+            </p>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-sidebar-border/70 text-left text-muted-foreground dark:border-sidebar-border">
+                        <tr
+                            class="border-sidebar-border/70 text-muted-foreground dark:border-sidebar-border border-b text-left"
+                        >
                             <th class="py-2 pr-4 font-medium">Repartidor</th>
-                            <th class="py-2 pr-4 text-right font-medium">Pedidos</th>
-                            <th class="py-2 pr-4 text-right font-medium">Entregados</th>
-                            <th class="py-2 pr-4 text-right font-medium">Total cobrado</th>
-                            <th class="py-2 text-right font-medium">Comisiones</th>
+                            <th class="py-2 pr-4 text-right font-medium">
+                                Pedidos
+                            </th>
+                            <th class="py-2 pr-4 text-right font-medium">
+                                Entregados
+                            </th>
+                            <th class="py-2 pr-4 text-right font-medium">
+                                Tiempo promedio
+                            </th>
+                            <th class="py-2 pr-4 text-right font-medium">
+                                Comisiones
+                            </th>
+                            <th class="py-2 text-right font-medium">
+                                Dinero movido
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="row in perCourier" :key="row.courier" class="border-b border-sidebar-border/40 dark:border-sidebar-border/60">
+                        <tr
+                            v-for="row in perCourier"
+                            :key="row.courier"
+                            class="border-sidebar-border/40 dark:border-sidebar-border/60 border-b"
+                        >
                             <td class="py-2 pr-4">{{ row.courier }}</td>
-                            <td class="py-2 pr-4 text-right">{{ row.orders }}</td>
-                            <td class="py-2 pr-4 text-right">{{ row.delivered }}</td>
-                            <td class="py-2 pr-4 text-right">{{ money(row.revenue) }}</td>
-                            <td class="py-2 text-right">{{ money(row.commission) }}</td>
+                            <td class="py-2 pr-4 text-right">
+                                {{ row.orders }}
+                            </td>
+                            <td class="py-2 pr-4 text-right">
+                                {{ row.delivered }}
+                            </td>
+                            <td class="py-2 pr-4 text-right">
+                                {{ duration(row.average) }}
+                            </td>
+                            <td class="py-2 pr-4 text-right font-medium">
+                                {{ money(row.commission) }}
+                            </td>
+                            <td class="text-muted-foreground py-2 text-right">
+                                {{ money(row.moved) }}
+                            </td>
                         </tr>
                         <tr v-if="perCourier.length === 0">
-                            <td colspan="5" class="py-6 text-center text-muted-foreground">Sin pedidos asignados en el periodo.</td>
+                            <td
+                                colspan="6"
+                                class="text-muted-foreground py-6 text-center"
+                            >
+                                Sin pedidos asignados en el periodo.
+                            </td>
                         </tr>
                     </tbody>
                 </table>
@@ -208,27 +499,55 @@ const maxDayOrders = computed<number>(() =>
         </div>
 
         <!-- Productos más comprados -->
-        <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-            <h2 class="mb-3 text-base font-semibold">Productos más comprados</h2>
+        <div
+            class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4"
+        >
+            <h2 class="text-base font-semibold">Productos más comprados</h2>
+            <p class="text-muted-foreground mb-3 text-xs">
+                Agrupados por el nombre que escribió el repartidor
+            </p>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-sidebar-border/70 text-left text-muted-foreground dark:border-sidebar-border">
+                        <tr
+                            class="border-sidebar-border/70 text-muted-foreground dark:border-sidebar-border border-b text-left"
+                        >
                             <th class="py-2 pr-4 font-medium">Producto</th>
-                            <th class="py-2 pr-4 text-right font-medium">Cantidad</th>
-                            <th class="py-2 pr-4 text-right font-medium">Veces pedido</th>
-                            <th class="py-2 text-right font-medium">Total gastado</th>
+                            <th class="py-2 pr-4 text-right font-medium">
+                                Cantidad
+                            </th>
+                            <th class="py-2 pr-4 text-right font-medium">
+                                Veces pedido
+                            </th>
+                            <th class="py-2 text-right font-medium">
+                                Total gastado
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="row in topProducts" :key="row.name" class="border-b border-sidebar-border/40 dark:border-sidebar-border/60">
+                        <tr
+                            v-for="row in topProducts"
+                            :key="row.name"
+                            class="border-sidebar-border/40 dark:border-sidebar-border/60 border-b"
+                        >
                             <td class="py-2 pr-4">{{ row.name }}</td>
-                            <td class="py-2 pr-4 text-right">{{ row.quantity }}</td>
-                            <td class="py-2 pr-4 text-right">{{ row.orders }}</td>
-                            <td class="py-2 text-right">{{ money(row.spent) }}</td>
+                            <td class="py-2 pr-4 text-right">
+                                {{ row.quantity }}
+                            </td>
+                            <td class="py-2 pr-4 text-right">
+                                {{ row.orders }}
+                            </td>
+                            <td class="py-2 text-right">
+                                {{ money(row.spent) }}
+                            </td>
                         </tr>
                         <tr v-if="topProducts.length === 0">
-                            <td colspan="4" class="py-6 text-center text-muted-foreground">Sin productos en el periodo.</td>
+                            <td
+                                colspan="4"
+                                class="text-muted-foreground py-6 text-center"
+                            >
+                                Sin productos en el periodo.
+                            </td>
                         </tr>
                     </tbody>
                 </table>

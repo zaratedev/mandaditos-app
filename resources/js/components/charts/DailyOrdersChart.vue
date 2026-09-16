@@ -23,6 +23,8 @@ const props = defineProps<{
     unit: string;
     /** Today as the server counts it, so the current bar is never off by a timezone. */
     today?: string;
+    /** What the money line means here: the dashboard plots sales, reports plot fees. */
+    revenueLabel?: string;
 }>();
 
 const emit = defineEmits<{
@@ -123,7 +125,7 @@ function render(): void {
 
                             return [
                                 `${point?.orders ?? 0} pedidos`,
-                                `Ventas: ${money(point?.revenue ?? 0)}`,
+                                `${props.revenueLabel ?? 'Ventas'}: ${money(point?.revenue ?? 0)}`,
                             ];
                         },
                     },
