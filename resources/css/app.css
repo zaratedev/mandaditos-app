@@ -173,3 +173,54 @@
         @apply bg-background text-foreground;
     }
 }
+
+/*
+ * Printing — and "Guardar como PDF", which is the same thing through the browser's
+ * print dialog. The page is the report; the chrome around it is not. Dark mode is
+ * forced back to light because browsers drop background colours when printing, and
+ * a dark theme printed that way is white text on white paper.
+ */
+@media print {
+    .dark {
+        --background: hsl(0 0% 100%);
+        --foreground: hsl(0 0% 3.9%);
+        --card: hsl(0 0% 100%);
+        --card-foreground: hsl(0 0% 3.9%);
+        --muted-foreground: hsl(0 0% 32%);
+        --border: hsl(0 0% 80%);
+        --sidebar-border: hsl(0 0% 80%);
+    }
+
+    [data-slot='sidebar'],
+    [data-sidebar='trigger'],
+    [data-slot='sidebar-trigger'],
+    header,
+    .print-hidden {
+        display: none !important;
+    }
+
+    /* Nothing scrolls on paper, and a card cut in half across two pages is a card
+       nobody can read. */
+    html,
+    body {
+        height: auto !important;
+        overflow: visible !important;
+        background: #fff !important;
+    }
+
+    main,
+    [data-slot='sidebar-inset'] {
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+    }
+
+    table,
+    .rounded-xl {
+        break-inside: avoid;
+    }
+
+    @page {
+        margin: 12mm;
+    }
+}

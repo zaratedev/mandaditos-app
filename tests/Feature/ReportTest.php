@@ -321,3 +321,69 @@ test('reports include a product breakdown', function () {
             ->where('topProducts.0.orders', 2)
         );
 });
+
+test('an admin downloads the report as a spreadsheet', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+
+    reportOrder([
+        'status' => OrderStatus::Delivered,
+        'payment_status' => PaymentStatus::Paid,
+        'payment_method' => PaymentMethod::Cash,
+        'delivered_at' => now(),
+        'paid_at' => now(),
+        'total' => 640,
+        'commission' => 40,
+    ]);
+
+    $from = now()->startOfMonth()->toDateString();
+    $to = now()->toDateString();
+
+    $response = $this->actingAs($admin)->get("/reports/export?from={$from}&to={$to}");
+
+    $response->assertOk()
+        ->assertHeader(
+            'content-type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        ->assertDownload("reportes-{$from}-a-{$to}.xlsx");
+
+    // A real workbook, with the sheets and the figures the page is showing.
+    $path = tempnam(sys_get_temp_dir(), 'test').'.xlsx';
+    file_put_contents($path, $response->streamedContent());
+
+    $zip = new ZipArchive;
+    expect($zip->open($path))->toBeTrue();
+
+    $workbook = (string) $zip->getFromName('xl/workbook.xml');
+    $sheet = (string) $zip->getFromName('xl/worksheets/sheet1.xml');
+    $zip->close();
+    unlink($path);
+
+    expect($workbook)->toContain('Resumen')
+        ->and($workbook)->toContain('Clientes')
+        ->and($workbook)->toContain('Repartidores')
+        ->and($sheet)->toContain('Comisiones cobradas')
+        ->and($sheet)->toContain('40')
+        ->and($sheet)->toContain('640');
+});
+
+test('the spreadsheet covers whatever range was asked for', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+
+    $this->actingAs($admin)
+        ->get('/reports/export?from=2026-03-01&to=2026-03-31')
+        ->assertOk()
+        ->assertDownload('reportes-2026-03-01-a-2026-03-31.xlsx');
+});
+
+test('couriers cannot download the report', function () {
+    $courier = User::factory()->create(['role' => UserRole::Courier]);
+
+    $this->actingAs($courier)->get('/reports/export')->assertForbidden();
+});
+
+test('the export refuses a date it cannot read', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+
+    $this->actingAs($admin)->get('/reports/export?from=ayer')->assertSessionHasErrors('from');
+});

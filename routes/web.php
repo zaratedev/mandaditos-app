@@ -30,6 +30,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::middleware('admin')->group(function () {
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('reports/export', [ReportController::class, 'export'])->name('reports.export');
 
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('orders/create', [OrderController::class, 'create'])->name('orders.create');

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import DailyOrdersChart from '@/components/charts/DailyOrdersChart.vue';
 import Datepicker from '@/components/Datepicker.vue';
 import { duration, money, shortDate } from '@/lib/format';
@@ -91,6 +91,19 @@ defineOptions({
 const from = ref(props.filters.from);
 const to = ref(props.filters.to);
 
+/** The file has to cover what the page is showing, not what the pickers hold. */
+const exportUrl = computed(
+    (): string =>
+        `/reports/export?${new URLSearchParams({
+            from: props.filters.from,
+            to: props.filters.to,
+        }).toString()}`,
+);
+
+function printReport(): void {
+    window.print();
+}
+
 function apply(): void {
     router.get(
         '/reports',
@@ -130,7 +143,7 @@ function trendClass(value: number | null): string {
             <h1 class="text-xl font-semibold">Reportes</h1>
 
             <form
-                class="flex flex-wrap items-end gap-2"
+                class="print-hidden flex flex-wrap items-end gap-2"
                 @submit.prevent="apply"
             >
                 <div class="grid gap-1">
@@ -147,8 +160,27 @@ function trendClass(value: number | null): string {
                 >
                     Aplicar
                 </button>
+
+                <a
+                    :href="exportUrl"
+                    class="border-sidebar-border/70 dark:border-sidebar-border hover:bg-muted rounded-lg border px-4 py-2 text-sm font-medium"
+                >
+                    Excel
+                </a>
+
+                <button
+                    type="button"
+                    class="border-sidebar-border/70 dark:border-sidebar-border hover:bg-muted rounded-lg border px-4 py-2 text-sm font-medium"
+                    @click="printReport"
+                >
+                    Imprimir / PDF
+                </button>
             </form>
         </div>
+
+        <p class="text-muted-foreground hidden text-sm print:block">
+            Del {{ shortDate(filters.from) }} al {{ shortDate(filters.to) }}
+        </p>
 
         <!-- Dinero -->
         <div>
