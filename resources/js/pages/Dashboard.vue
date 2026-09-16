@@ -277,7 +277,8 @@ function openChartPoint(date: string): void {
                             {{ money(finance?.receivable.amount) }}
                         </p>
                         <p class="text-muted-foreground mt-1 text-xs">
-                            {{ finance?.receivable.orders ?? 0 }} pedido(s)<template
+                            {{ finance?.receivable.orders ?? 0 }}
+                            pedido(s)<template
                                 v-if="
                                     (finance?.receivable.oldestDays ?? null) !==
                                     null
@@ -429,7 +430,7 @@ function openChartPoint(date: string): void {
 
                             <div
                                 v-if="customOpen"
-                                class="border-sidebar-border/70 dark:border-sidebar-border absolute top-full right-0 z-50 mt-2 w-64 rounded-lg border bg-background p-3 shadow-md"
+                                class="border-sidebar-border/70 dark:border-sidebar-border bg-background absolute top-full right-0 z-50 mt-2 w-64 rounded-lg border p-3 shadow-md"
                             >
                                 <div class="grid gap-2">
                                     <div class="grid gap-1">

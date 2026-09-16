@@ -24,7 +24,14 @@ interface Order {
     payment_status: string;
     payment_status_label: string;
     client: { id: number; name: string; phone: string | null };
-    address: { id: number; label: string | null; street: string; neighborhood: string | null; city: string | null; landmark: string | null };
+    address: {
+        id: number;
+        label: string | null;
+        street: string;
+        neighborhood: string | null;
+        city: string | null;
+        landmark: string | null;
+    };
     items: Item[];
 }
 
@@ -43,9 +50,10 @@ const statusForm = useForm<{ status: string }>({
     status: props.order.status,
 });
 
-
 function updateStatus(): void {
-    statusForm.post(`/board/${props.order.id}/status`, { preserveScroll: true });
+    statusForm.post(`/board/${props.order.id}/status`, {
+        preserveScroll: true,
+    });
 }
 </script>
 
@@ -56,53 +64,100 @@ function updateStatus(): void {
         <div class="flex items-center justify-between gap-3">
             <h1 class="text-xl font-semibold">Pedido #{{ order.id }}</h1>
             <div class="flex items-center gap-2">
-                <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="statusBadgeClass(order.status)">
+                <span
+                    class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium"
+                    :class="statusBadgeClass(order.status)"
+                >
                     {{ order.status_label }}
                 </span>
-                <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="paymentBadgeClass(order.payment_status)">
+                <span
+                    class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium"
+                    :class="paymentBadgeClass(order.payment_status)"
+                >
                     {{ order.payment_status_label }}
                 </span>
             </div>
         </div>
 
-        <div class="rounded-xl border border-sidebar-border/70 p-4 text-sm dark:border-sidebar-border">
+        <div
+            class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4 text-sm"
+        >
             <p class="font-medium">{{ order.client.name }}</p>
-            <a v-if="order.client.phone" :href="`tel:${order.client.phone}`" class="text-primary-strong underline">
+            <a
+                v-if="order.client.phone"
+                :href="`tel:${order.client.phone}`"
+                class="text-primary-strong underline"
+            >
                 {{ order.client.phone }}
             </a>
-            <p class="mt-2 text-muted-foreground">
-                {{ order.address.street }}<template v-if="order.address.neighborhood">, {{ order.address.neighborhood }}</template>
+            <p class="text-muted-foreground mt-2">
+                {{ order.address.street
+                }}<template v-if="order.address.neighborhood"
+                    >, {{ order.address.neighborhood }}</template
+                >
             </p>
-            <p v-if="order.address.landmark" class="text-muted-foreground">Ref: {{ order.address.landmark }}</p>
+            <p v-if="order.address.landmark" class="text-muted-foreground">
+                Ref: {{ order.address.landmark }}
+            </p>
         </div>
 
-        <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+        <div
+            class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4"
+        >
             <h2 class="mb-2 text-base font-semibold">Lista de compra</h2>
-            <p class="whitespace-pre-line text-sm text-muted-foreground">{{ order.shopping_list }}</p>
+            <p class="text-muted-foreground text-sm whitespace-pre-line">
+                {{ order.shopping_list }}
+            </p>
         </div>
 
-        <div v-if="order.items.length > 0" class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+        <div
+            v-if="order.items.length > 0"
+            class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4"
+        >
             <h2 class="mb-3 text-base font-semibold">Productos</h2>
             <ul class="space-y-1 text-sm">
-                <li v-for="item in order.items" :key="item.id" class="flex justify-between gap-3">
+                <li
+                    v-for="item in order.items"
+                    :key="item.id"
+                    class="flex justify-between gap-3"
+                >
                     <span>{{ item.quantity }} × {{ item.name }}</span>
-                    <span class="text-muted-foreground">{{ money(item.line_total) }}</span>
+                    <span class="text-muted-foreground">{{
+                        money(item.line_total)
+                    }}</span>
                 </li>
             </ul>
-            <p class="mt-3 text-right text-sm">Total: <span class="font-semibold">{{ money(order.total) }}</span></p>
+            <p class="mt-3 text-right text-sm">
+                Total:
+                <span class="font-semibold">{{ money(order.total) }}</span>
+            </p>
         </div>
 
-        <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+        <div
+            class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4"
+        >
             <h2 class="mb-3 text-base font-semibold">Actualizar estado</h2>
             <div class="grid gap-2">
                 <Select v-model="statusForm.status">
-                    <option v-for="option in statuses" :key="option.value" :value="option.value">{{ option.label }}</option>
+                    <option
+                        v-for="option in statuses"
+                        :key="option.value"
+                        :value="option.value"
+                    >
+                        {{ option.label }}
+                    </option>
                 </Select>
-                <Button :disabled="statusForm.processing" @click="updateStatus">Guardar estado</Button>
+                <Button :disabled="statusForm.processing" @click="updateStatus"
+                    >Guardar estado</Button
+                >
             </div>
-            <p class="mt-2 text-xs text-muted-foreground">El cobro lo registra el administrador.</p>
+            <p class="text-muted-foreground mt-2 text-xs">
+                El cobro lo registra el administrador.
+            </p>
         </div>
 
-        <Link href="/board" class="text-sm text-muted-foreground">← Volver a mis pedidos</Link>
+        <Link href="/board" class="text-muted-foreground text-sm"
+            >← Volver a mis pedidos</Link
+        >
     </div>
 </template>

@@ -62,20 +62,39 @@ watch(
         const parsed = parseISO(value);
 
         if (parsed) {
-            viewDate.value = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
+            viewDate.value = new Date(
+                parsed.getFullYear(),
+                parsed.getMonth(),
+                1,
+            );
         }
     },
 );
 
 const monthLabel = computed<string>(() =>
-    new Intl.DateTimeFormat('es-MX', { month: 'long', year: 'numeric' }).format(viewDate.value),
+    new Intl.DateTimeFormat('es-MX', { month: 'long', year: 'numeric' }).format(
+        viewDate.value,
+    ),
 );
 
 const yearLabel = computed<string>(() => String(viewDate.value.getFullYear()));
 
 const weekdays = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
 
-const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+const months = [
+    'Ene',
+    'Feb',
+    'Mar',
+    'Abr',
+    'May',
+    'Jun',
+    'Jul',
+    'Ago',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dic',
+];
 
 const days = computed<Date[]>(() => {
     const year = viewDate.value.getFullYear();
@@ -84,8 +103,14 @@ const days = computed<Date[]>(() => {
     const startOffset = (first.getDay() + 6) % 7; // Monday-first grid
     const start = new Date(year, month, 1 - startOffset);
 
-    return Array.from({ length: 42 }, (_, index) =>
-        new Date(start.getFullYear(), start.getMonth(), start.getDate() + index),
+    return Array.from(
+        { length: 42 },
+        (_, index) =>
+            new Date(
+                start.getFullYear(),
+                start.getMonth(),
+                start.getDate() + index,
+            ),
     );
 });
 
@@ -93,7 +118,11 @@ const displayValue = computed<string>(() => {
     const date = selected.value;
 
     return date
-        ? new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date)
+        ? new Intl.DateTimeFormat('es-MX', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+          }).format(date)
         : props.placeholder;
 });
 
@@ -127,29 +156,53 @@ function clear(): void {
 }
 
 function prevMonth(): void {
-    viewDate.value = new Date(viewDate.value.getFullYear(), viewDate.value.getMonth() - 1, 1);
+    viewDate.value = new Date(
+        viewDate.value.getFullYear(),
+        viewDate.value.getMonth() - 1,
+        1,
+    );
 }
 
 function nextMonth(): void {
-    viewDate.value = new Date(viewDate.value.getFullYear(), viewDate.value.getMonth() + 1, 1);
+    viewDate.value = new Date(
+        viewDate.value.getFullYear(),
+        viewDate.value.getMonth() + 1,
+        1,
+    );
 }
 
 function prevYear(): void {
-    viewDate.value = new Date(viewDate.value.getFullYear() - 1, viewDate.value.getMonth(), 1);
+    viewDate.value = new Date(
+        viewDate.value.getFullYear() - 1,
+        viewDate.value.getMonth(),
+        1,
+    );
 }
 
 function nextYear(): void {
-    viewDate.value = new Date(viewDate.value.getFullYear() + 1, viewDate.value.getMonth(), 1);
+    viewDate.value = new Date(
+        viewDate.value.getFullYear() + 1,
+        viewDate.value.getMonth(),
+        1,
+    );
 }
 
 // One pair of chevrons serves both faces: months on the day grid, years on the
 // month grid.
 function goPrev(): void {
-    view.value === 'days' ? prevMonth() : prevYear();
+    if (view.value === 'days') {
+        prevMonth();
+    } else {
+        prevYear();
+    }
 }
 
 function goNext(): void {
-    view.value === 'days' ? nextMonth() : nextYear();
+    if (view.value === 'days') {
+        nextMonth();
+    } else {
+        nextYear();
+    }
 }
 
 function selectMonth(month: number): void {
@@ -181,22 +234,26 @@ function toggleOpen(): void {
         <button
             :id="id"
             type="button"
-            class="flex h-9 w-full items-center gap-2 rounded-md border border-input bg-transparent px-3 text-left text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            class="border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-9 w-full items-center gap-2 rounded-md border bg-transparent px-3 text-left text-sm shadow-xs outline-none focus-visible:ring-[3px]"
             @click="toggleOpen"
         >
-            <CalendarDays class="size-4 shrink-0 text-muted-foreground" />
-            <span :class="selected ? '' : 'text-muted-foreground'">{{ displayValue }}</span>
+            <CalendarDays class="text-muted-foreground size-4 shrink-0" />
+            <span :class="selected ? '' : 'text-muted-foreground'">{{
+                displayValue
+            }}</span>
         </button>
 
         <div
             v-if="open"
-            class="absolute z-50 mt-1 w-64 rounded-lg border border-sidebar-border/70 bg-background p-3 shadow-md dark:border-sidebar-border"
+            class="border-sidebar-border/70 bg-background dark:border-sidebar-border absolute z-50 mt-1 w-64 rounded-lg border p-3 shadow-md"
         >
             <div class="mb-2 flex items-center justify-between">
                 <button
                     type="button"
-                    class="inline-flex size-7 items-center justify-center rounded-md hover:bg-muted"
-                    :aria-label="view === 'days' ? 'Mes anterior' : 'Año anterior'"
+                    class="hover:bg-muted inline-flex size-7 items-center justify-center rounded-md"
+                    :aria-label="
+                        view === 'days' ? 'Mes anterior' : 'Año anterior'
+                    "
                     @click="goPrev"
                 >
                     <ChevronLeft class="size-4" />
@@ -204,7 +261,7 @@ function toggleOpen(): void {
                 <button
                     v-if="view === 'days'"
                     type="button"
-                    class="rounded-md px-2 py-1 text-sm font-medium capitalize hover:bg-muted"
+                    class="hover:bg-muted rounded-md px-2 py-1 text-sm font-medium capitalize"
                     aria-label="Elegir mes"
                     @click="view = 'months'"
                 >
@@ -213,7 +270,7 @@ function toggleOpen(): void {
                 <button
                     v-else
                     type="button"
-                    class="rounded-md px-2 py-1 text-sm font-medium hover:bg-muted"
+                    class="hover:bg-muted rounded-md px-2 py-1 text-sm font-medium"
                     aria-label="Volver a los días"
                     @click="view = 'days'"
                 >
@@ -221,8 +278,10 @@ function toggleOpen(): void {
                 </button>
                 <button
                     type="button"
-                    class="inline-flex size-7 items-center justify-center rounded-md hover:bg-muted"
-                    :aria-label="view === 'days' ? 'Mes siguiente' : 'Año siguiente'"
+                    class="hover:bg-muted inline-flex size-7 items-center justify-center rounded-md"
+                    :aria-label="
+                        view === 'days' ? 'Mes siguiente' : 'Año siguiente'
+                    "
                     @click="goNext"
                 >
                     <ChevronRight class="size-4" />
@@ -230,8 +289,12 @@ function toggleOpen(): void {
             </div>
 
             <template v-if="view === 'days'">
-                <div class="mb-1 grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">
-                    <span v-for="weekday in weekdays" :key="weekday">{{ weekday }}</span>
+                <div
+                    class="text-muted-foreground mb-1 grid grid-cols-7 gap-1 text-center text-xs"
+                >
+                    <span v-for="weekday in weekdays" :key="weekday">{{
+                        weekday
+                    }}</span>
                 </div>
 
                 <div class="grid grid-cols-7 gap-1">
@@ -239,13 +302,17 @@ function toggleOpen(): void {
                         v-for="day in days"
                         :key="toISO(day)"
                         type="button"
-                        class="inline-flex size-8 items-center justify-center rounded-md text-sm hover:bg-muted"
+                        class="hover:bg-muted inline-flex size-8 items-center justify-center rounded-md text-sm"
                         :class="[
-                            inCurrentMonth(day) ? '' : 'text-muted-foreground/40',
+                            inCurrentMonth(day)
+                                ? ''
+                                : 'text-muted-foreground/40',
                             isSameDay(day, selected)
                                 ? 'bg-primary text-primary-foreground hover:bg-primary hover:opacity-90'
                                 : '',
-                            isToday(day) && !isSameDay(day, selected) ? 'font-semibold text-primary-strong' : '',
+                            isToday(day) && !isSameDay(day, selected)
+                                ? 'text-primary-strong font-semibold'
+                                : '',
                         ]"
                         @click="selectDay(day)"
                     >
@@ -259,7 +326,7 @@ function toggleOpen(): void {
                     v-for="(name, index) in months"
                     :key="name"
                     type="button"
-                    class="inline-flex items-center justify-center rounded-md py-2 text-sm hover:bg-muted"
+                    class="hover:bg-muted inline-flex items-center justify-center rounded-md py-2 text-sm"
                     :class="
                         isSelectedMonth(index)
                             ? 'bg-primary text-primary-foreground hover:bg-primary hover:opacity-90'
@@ -274,7 +341,7 @@ function toggleOpen(): void {
             <div class="mt-2 flex justify-end">
                 <button
                     type="button"
-                    class="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
+                    class="text-muted-foreground hover:bg-muted rounded-md px-2 py-1 text-xs"
                     @click="clear"
                 >
                     Limpiar

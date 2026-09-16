@@ -55,7 +55,8 @@ const handleRegisterSuccess = () => {
                 </div>
                 <p class="font-medium">Aún no tienes claves de acceso</p>
                 <p class="text-muted-foreground mt-1 text-sm">
-                    Agrega una clave de acceso para iniciar sesión sin contraseña
+                    Agrega una clave de acceso para iniciar sesión sin
+                    contraseña
                 </p>
             </div>
         </div>

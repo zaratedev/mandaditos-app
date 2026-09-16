@@ -11,16 +11,16 @@
 
 ## 0. Decisiones confirmadas (Fase 0)
 
-| # | Decisión | Resolución |
-|---|---|---|
-| 1 | Login del cliente en el MVP | **No.** El cliente no entra al sistema; es herramienta interna. |
-| 2 | Comisión | **Manual** — el admin la captura por pedido. |
-| 3 | Quién captura el pedido | **Admin** (por ahora). |
-| 4 | Quién registra el cobro | **Admin**. |
-| 5 | Corte / liquidación | **Sí, en el MVP** (lo hace el admin). |
-| 6 | Base de datos | **MySQL**. |
-| 7 | Marca / nombre en la UI | **"Mandaditos app"**. |
-| 8 | Desglose de productos | **Ambas**: lista en texto libre **y** líneas de producto con precio. |
+| #   | Decisión                    | Resolución                                                           |
+| --- | --------------------------- | -------------------------------------------------------------------- |
+| 1   | Login del cliente en el MVP | **No.** El cliente no entra al sistema; es herramienta interna.      |
+| 2   | Comisión                    | **Manual** — el admin la captura por pedido.                         |
+| 3   | Quién captura el pedido     | **Admin** (por ahora).                                               |
+| 4   | Quién registra el cobro     | **Admin**.                                                           |
+| 5   | Corte / liquidación         | **Sí, en el MVP** (lo hace el admin).                                |
+| 6   | Base de datos               | **MySQL**.                                                           |
+| 7   | Marca / nombre en la UI     | **"Mandaditos app"**.                                                |
+| 8   | Desglose de productos       | **Ambas**: lista en texto libre **y** líneas de producto con precio. |
 
 > Nota sobre roles: aunque hoy solo el **admin** captura pedidos y registra cobros,
 > el rol **courier** (repartidor) existe desde el MVP para asignarle pedidos y que
@@ -60,11 +60,11 @@ el total no se conoce hasta comprar.
 
 ## 3. Actores y roles
 
-| Actor | Rol en el sistema | Acceso |
-|---|---|---|
-| **Administrador / dueño** | `admin` | Total: orders, clients, couriers, reportes, corte. Captura pedidos y registra cobros. |
-| **Repartidor** | `courier` | Ve **sus** pedidos asignados y actualiza su estado operativo (desde el celular). |
-| **Cliente** | — (sin login) | Dato administrado por el negocio. Ver fase futura. |
+| Actor                     | Rol en el sistema | Acceso                                                                                |
+| ------------------------- | ----------------- | ------------------------------------------------------------------------------------- |
+| **Administrador / dueño** | `admin`           | Total: orders, clients, couriers, reportes, corte. Captura pedidos y registra cobros. |
+| **Repartidor**            | `courier`         | Ve **sus** pedidos asignados y actualiza su estado operativo (desde el celular).      |
+| **Cliente**               | — (sin login)     | Dato administrado por el negocio. Ver fase futura.                                    |
 
 ---
 
@@ -85,7 +85,7 @@ trabajar (siguen usando WhatsApp con el cliente; registran y controlan en el sis
 
 **Viable.** Problema real y concreto; MVP pequeño y entregable; ventaja de confianza
 (cliente frecuente = acceso directo a quien decide); stack maduro y barato.
-**Riesgo #1: adopción** → el MVP debe ser *más fácil* que WhatsApp + papel (captura en
+**Riesgo #1: adopción** → el MVP debe ser _más fácil_ que WhatsApp + papel (captura en
 pocos clics). No competimos con WhatsApp como canal; el sistema es gestión interna.
 
 ---
@@ -104,18 +104,18 @@ validación para venderlo después a otros negocios de mandados.
 
 ### 7.1. Dentro del MVP (v1)
 
-| # | Funcionalidad |
-|---|---|
-| 1 | **Auth y roles** (`admin`, `courier`). |
-| 2 | **Clients** — alta/edición con teléfono y una o varias direcciones. |
-| 3 | **Couriers** — alta/edición (usuarios con rol `courier`). |
-| 4 | **Orders** — captura rápida (admin): cliente + lista (texto) + **líneas de producto con precio** + dirección + notas. |
-| 5 | **Asignación** de un courier al pedido. |
-| 6 | **Ciclo de vida del pedido** con timestamps (sección 9). |
-| 7 | **Montos**: items_subtotal + commission (manual) = total; método y estado de pago (registrado por admin). |
-| 8 | **Panel del courier** (mobile-first): ve solo sus pedidos y actualiza estado. |
-| 9 | **Dashboard del admin**: pedidos del día por estado, totales, quién tiene qué. |
-| 10 | **Corte / liquidación** (admin): efectivo vs transferencia y comisiones por courier. |
+| #   | Funcionalidad                                                                                                         |
+| --- | --------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Auth y roles** (`admin`, `courier`).                                                                                |
+| 2   | **Clients** — alta/edición con teléfono y una o varias direcciones.                                                   |
+| 3   | **Couriers** — alta/edición (usuarios con rol `courier`).                                                             |
+| 4   | **Orders** — captura rápida (admin): cliente + lista (texto) + **líneas de producto con precio** + dirección + notas. |
+| 5   | **Asignación** de un courier al pedido.                                                                               |
+| 6   | **Ciclo de vida del pedido** con timestamps (sección 9).                                                              |
+| 7   | **Montos**: items_subtotal + commission (manual) = total; método y estado de pago (registrado por admin).             |
+| 8   | **Panel del courier** (mobile-first): ve solo sus pedidos y actualiza estado.                                         |
+| 9   | **Dashboard del admin**: pedidos del día por estado, totales, quién tiene qué.                                        |
+| 10  | **Corte / liquidación** (admin): efectivo vs transferencia y comisiones por courier.                                  |
 
 ### 7.2. Fuera del MVP (roadmap)
 
@@ -138,71 +138,71 @@ order_items  (shopping line items, optional unit price)
 
 **`users`**
 
-| Column | Type | Notes |
-|---|---|---|
-| id | pk | |
-| name, email, password | — | Breeze default |
-| role | enum(`admin`,`courier`) | default `courier` |
-| timestamps | | |
+| Column                | Type                    | Notes             |
+| --------------------- | ----------------------- | ----------------- |
+| id                    | pk                      |                   |
+| name, email, password | —                       | Breeze default    |
+| role                  | enum(`admin`,`courier`) | default `courier` |
+| timestamps            |                         |                   |
 
 **`clients`**
 
-| Column | Type | Notes |
-|---|---|---|
-| id | pk | |
-| name | string | |
-| phone | string | |
-| notes | text nullable | |
-| timestamps | | |
+| Column     | Type          | Notes |
+| ---------- | ------------- | ----- |
+| id         | pk            |       |
+| name       | string        |       |
+| phone      | string        |       |
+| notes      | text nullable |       |
+| timestamps |               |       |
 
 **`addresses`**
 
-| Column | Type | Notes |
-|---|---|---|
-| id | pk | |
-| client_id | fk → clients | cascade |
-| label | string nullable | ej. "Casa", "Trabajo" |
-| street | string | |
-| neighborhood | string nullable | |
-| city | string nullable | |
-| landmark | string nullable | referencias para llegar |
-| notes | text nullable | |
-| timestamps | | |
+| Column       | Type            | Notes                   |
+| ------------ | --------------- | ----------------------- |
+| id           | pk              |                         |
+| client_id    | fk → clients    | cascade                 |
+| label        | string nullable | ej. "Casa", "Trabajo"   |
+| street       | string          |                         |
+| neighborhood | string nullable |                         |
+| city         | string nullable |                         |
+| landmark     | string nullable | referencias para llegar |
+| notes        | text nullable   |                         |
+| timestamps   |                 |                         |
 
 **`orders`** (entidad central)
 
-| Column | Type | Notes |
-|---|---|---|
-| id | pk | |
-| client_id | fk → clients | |
-| address_id | fk → addresses | dirección de entrega |
-| courier_id | fk → users, nullable | asignado por el admin |
-| status | enum | `requested`,`confirmed`,`assigned`,`purchasing`,`purchased`,`on_the_way`,`delivered`,`cancelled` |
-| shopping_list | text | lista original tal cual la mandó el cliente |
-| items_subtotal | decimal(10,2) nullable | suma de productos (al comprar) |
-| commission | decimal(10,2) nullable | ganancia del negocio (manual) |
-| total | decimal(10,2) nullable | items_subtotal + commission |
-| payment_method | enum(`transfer`,`cash`) nullable | |
-| payment_status | enum(`pending`,`paid`) | default `pending` |
-| notes | text nullable | |
-| created_by | fk → users | quién capturó |
-| confirmed_at | datetime nullable | |
-| purchased_at | datetime nullable | |
-| delivered_at | datetime nullable | |
-| paid_at | datetime nullable | |
-| timestamps | | |
+| Column         | Type                             | Notes                                                                                            |
+| -------------- | -------------------------------- | ------------------------------------------------------------------------------------------------ |
+| id             | pk                               |                                                                                                  |
+| client_id      | fk → clients                     |                                                                                                  |
+| address_id     | fk → addresses                   | dirección de entrega                                                                             |
+| courier_id     | fk → users, nullable             | asignado por el admin                                                                            |
+| status         | enum                             | `requested`,`confirmed`,`assigned`,`purchasing`,`purchased`,`on_the_way`,`delivered`,`cancelled` |
+| shopping_list  | text                             | lista original tal cual la mandó el cliente                                                      |
+| items_subtotal | decimal(10,2) nullable           | suma de productos (al comprar)                                                                   |
+| commission     | decimal(10,2) nullable           | ganancia del negocio (manual)                                                                    |
+| total          | decimal(10,2) nullable           | items_subtotal + commission                                                                      |
+| payment_method | enum(`transfer`,`cash`) nullable |                                                                                                  |
+| payment_status | enum(`pending`,`paid`)           | default `pending`                                                                                |
+| notes          | text nullable                    |                                                                                                  |
+| created_by     | fk → users                       | quién capturó                                                                                    |
+| confirmed_at   | datetime nullable                |                                                                                                  |
+| purchased_at   | datetime nullable                |                                                                                                  |
+| delivered_at   | datetime nullable                |                                                                                                  |
+| paid_at        | datetime nullable                |                                                                                                  |
+| timestamps     |                                  |                                                                                                  |
 
 **`order_items`** (desglose con precio — opción "ambas")
 
-| Column | Type | Notes |
-|---|---|---|
-| id | pk | |
-| order_id | fk → orders | cascade |
-| name | string | descripción del producto |
-| quantity | decimal(8,2) | default 1 |
-| unit_price | decimal(10,2) nullable | se llena al comprar |
-| line_total | decimal(10,2) nullable | quantity * unit_price |
-| timestamps | | |
+| Column     | Type                   | Notes                    |
+| ---------- | ---------------------- | ------------------------ |
+| id         | pk                     |                          |
+| order_id   | fk → orders            | cascade                  |
+| name       | string                 | descripción del producto |
+| quantity   | decimal(8,2)           | default 1                |
+| unit_price | decimal(10,2) nullable | se llena al comprar      |
+| line_total | decimal(10,2) nullable | quantity * unit_price    |
+| timestamps |                        |                          |
 
 > **Diseño:** `shopping_list` guarda la lista tal cual la mandó el cliente (rápido de
 > capturar). `order_items` permite el desglose con precios para control fino. El
@@ -253,16 +253,16 @@ cuánto efectivo neto debe entregar cada courier al cierre.
 
 ## 11. Stack y arquitectura técnica
 
-| Capa | Tecnología | Motivo |
-|---|---|---|
-| Backend | **Laravel 12 (PHP 8.3+; local 8.4)** | Rápido para CRUD + reglas de negocio |
-| Frontend | **Inertia + Vue 3** | SPA sin API separada; menos complejidad para MVP |
-| Estilos | **Tailwind CSS** | Responsive (clave para el courier en la calle) |
-| Auth | **Laravel Breeze (Inertia + Vue)** | Auth de fábrica; roles con columna `role` |
-| Base de datos | **MySQL** | Confirmado |
-| Autorización | **Policies / Gates** | El courier solo ve sus pedidos; admin ve todo |
-| Validación | **Form Requests** | Consistente y limpia |
-| UI | Controllers → Inertia responses | Sin API REST separada en el MVP |
+| Capa          | Tecnología                           | Motivo                                           |
+| ------------- | ------------------------------------ | ------------------------------------------------ |
+| Backend       | **Laravel 12 (PHP 8.3+; local 8.4)** | Rápido para CRUD + reglas de negocio             |
+| Frontend      | **Inertia + Vue 3**                  | SPA sin API separada; menos complejidad para MVP |
+| Estilos       | **Tailwind CSS**                     | Responsive (clave para el courier en la calle)   |
+| Auth          | **Laravel Breeze (Inertia + Vue)**   | Auth de fábrica; roles con columna `role`        |
+| Base de datos | **MySQL**                            | Confirmado                                       |
+| Autorización  | **Policies / Gates**                 | El courier solo ve sus pedidos; admin ve todo    |
+| Validación    | **Form Requests**                    | Consistente y limpia                             |
+| UI            | Controllers → Inertia responses      | Sin API REST separada en el MVP                  |
 
 **Principios:** aprovechar lo nativo de Laravel (Form Requests, Policies, Eloquent,
 Enums de PHP); sin sobre-ingeniería (nada de repos/DTOs/eventos salvo necesidad real);
@@ -284,13 +284,13 @@ Enums de PHP); sin sobre-ingeniería (nada de repos/DTOs/eventos salvo necesidad
 
 ## 13. Roadmap por fases
 
-| Fase | Contenido | Estado |
-|---|---|---|
-| **Fase 0** | Documento + acuerdo de alcance | ✅ **Completada** |
+| Fase             | Contenido                                                                                              | Estado            |
+| ---------------- | ------------------------------------------------------------------------------------------------------ | ----------------- |
+| **Fase 0**       | Documento + acuerdo de alcance                                                                         | ✅ **Completada** |
 | **Fase 1 (MVP)** | Scaffolding, auth+roles, clients, couriers, orders + ciclo de vida, corte, editar/cancelar, español/MX | ✅ **Completada** |
-| **Fase 2** | Notificaciones, reportes, mejoras de desglose | ✅ **Completada** |
-| **Fase 3** | Integración WhatsApp, portal de cliente | Pendiente |
-| **Fase 4** | Multi-negocio / SaaS | Pendiente |
+| **Fase 2**       | Notificaciones, reportes, mejoras de desglose                                                          | ✅ **Completada** |
+| **Fase 3**       | Integración WhatsApp, portal de cliente                                                                | Pendiente         |
+| **Fase 4**       | Multi-negocio / SaaS                                                                                   | Pendiente         |
 
 ---
 
@@ -309,6 +309,7 @@ Entorno verificado: PHP 8.4.23 · Composer 2.10.2 · Node 24 · npm 11 · Larave
 5.31.1 · MySQL client instalado (**iniciar el servidor** con `brew services start mysql`).
 
 **Pasos previstos:**
+
 1. Crear proyecto Laravel 12 en la raíz e instalar **Breeze (Inertia + Vue + Tailwind)**.
 2. Configurar `.env` para MySQL (DB `mandaditos`).
 3. Enums de PHP: `UserRole`, `OrderStatus`, `PaymentMethod`, `PaymentStatus`.
@@ -335,7 +336,7 @@ México. 58 pruebas en verde.
 **Fase 2 — ✅ completada.** Tres frentes entregados:
 
 1. **Notificaciones.** Avisos in-app (base de datos): al asignar un pedido se notifica
-   al repartidor; al marcarse *entregado* se notifica a los administradores. Campana con
+   al repartidor; al marcarse _entregado_ se notifica a los administradores. Campana con
    contador en el encabezado y bandeja de notificaciones. (Canales externos como
    WhatsApp/email quedan para la Fase 3.)
 2. **Reportes.** Panel de reportes para el admin con rango de fechas: ventas y
@@ -350,7 +351,7 @@ México. 58 pruebas en verde.
 
 ## 17. Módulo de repartidores (pendiente de Fase 1, cerrado después)
 
-El punto 3 del alcance del MVP (§7.1, *"Couriers — alta/edición"*) quedó sin construir: el
+El punto 3 del alcance del MVP (§7.1, _"Couriers — alta/edición"_) quedó sin construir: el
 recap de la Fase 1 (§16) no lo mencionaba y nadie lo notó. Mientras el registro público
 estuvo abierto, un repartidor se daba de alta solo y la columna `users.role` lo dejaba con
 el rol correcto por defecto; al desactivar el auto-registro, dar de alta a un repartidor

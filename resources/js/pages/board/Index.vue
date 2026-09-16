@@ -29,7 +29,10 @@ defineOptions({
     <div class="mx-auto flex w-full max-w-2xl flex-col gap-4 p-4">
         <h1 class="text-xl font-semibold">Mis pedidos</h1>
 
-        <div v-if="orders.length === 0" class="rounded-xl border border-sidebar-border/70 p-8 text-center text-muted-foreground dark:border-sidebar-border">
+        <div
+            v-if="orders.length === 0"
+            class="border-sidebar-border/70 text-muted-foreground dark:border-sidebar-border rounded-xl border p-8 text-center"
+        >
             No tienes pedidos asignados abiertos.
         </div>
 
@@ -37,18 +40,27 @@ defineOptions({
             v-for="order in orders"
             :key="order.id"
             :href="`/board/${order.id}`"
-            class="flex items-center justify-between gap-3 rounded-xl border border-sidebar-border/70 p-4 transition hover:bg-muted/50 dark:border-sidebar-border"
+            class="border-sidebar-border/70 hover:bg-muted/50 dark:border-sidebar-border flex items-center justify-between gap-3 rounded-xl border p-4 transition"
         >
             <div class="min-w-0">
                 <p class="font-medium">Pedido #{{ order.id }}</p>
-                <p class="truncate text-sm text-muted-foreground">{{ order.client ?? '—' }}</p>
-                <p class="mt-1 text-xs text-muted-foreground">{{ order.created_at ?? '' }}</p>
+                <p class="text-muted-foreground truncate text-sm">
+                    {{ order.client ?? '—' }}
+                </p>
+                <p class="text-muted-foreground mt-1 text-xs">
+                    {{ order.created_at ?? '' }}
+                </p>
             </div>
             <div class="flex flex-col items-end gap-1">
-                <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium" :class="statusBadgeClass(order.status)">
+                <span
+                    class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
+                    :class="statusBadgeClass(order.status)"
+                >
                     {{ order.status_label }}
                 </span>
-                <span class="text-sm font-medium">{{ money(order.total) }}</span>
+                <span class="text-sm font-medium">{{
+                    money(order.total)
+                }}</span>
             </div>
         </Link>
     </div>

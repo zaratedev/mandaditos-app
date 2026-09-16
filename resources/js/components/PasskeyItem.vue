@@ -74,9 +74,9 @@ const handleDelete = () => {
             <DialogContent>
                 <DialogTitle>Eliminar clave de acceso</DialogTitle>
                 <DialogDescription>
-                    ¿Estás seguro de que quieres eliminar la clave de acceso
-                    "{{ passkey.name }}"? Ya no podrás usarla para iniciar
-                    sesión.
+                    ¿Estás seguro de que quieres eliminar la clave de acceso "{{
+                        passkey.name
+                    }}"? Ya no podrás usarla para iniciar sesión.
                 </DialogDescription>
                 <DialogFooter class="gap-2">
                     <DialogClose as-child>

@@ -67,7 +67,11 @@ function clear(): void {
 function toggleArchive(client: ClientRow): void {
     const action = client.is_active ? 'archive' : 'restore';
 
-    router.post(`/clients/${client.id}/${action}`, {}, { preserveScroll: true });
+    router.post(
+        `/clients/${client.id}/${action}`,
+        {},
+        { preserveScroll: true },
+    );
 }
 
 const fieldClass =
@@ -82,19 +86,21 @@ const fieldClass =
             <h1 class="text-xl font-semibold">Clientes</h1>
             <Link
                 href="/clients/create"
-                class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+                class="bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90"
             >
                 Nuevo cliente
             </Link>
         </div>
 
         <form
-            class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+            class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4"
             @submit.prevent="apply"
         >
             <div class="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <div class="grid gap-1 sm:col-span-2 lg:col-span-2">
-                    <label for="f-search" class="text-xs text-muted-foreground">Buscar (nombre o teléfono)</label>
+                    <label for="f-search" class="text-muted-foreground text-xs"
+                        >Buscar (nombre o teléfono)</label
+                    >
                     <input
                         id="f-search"
                         v-model="form.search"
@@ -105,7 +111,11 @@ const fieldClass =
                 </div>
 
                 <div class="grid gap-1">
-                    <label for="f-has-orders" class="text-xs text-muted-foreground">Pedidos</label>
+                    <label
+                        for="f-has-orders"
+                        class="text-muted-foreground text-xs"
+                        >Pedidos</label
+                    >
                     <Select id="f-has-orders" v-model="form.has_orders">
                         <option value="">Todos</option>
                         <option value="with">Con pedidos</option>
@@ -114,7 +124,9 @@ const fieldClass =
                 </div>
 
                 <div class="grid gap-1">
-                    <label for="f-status" class="text-xs text-muted-foreground">Estado</label>
+                    <label for="f-status" class="text-muted-foreground text-xs"
+                        >Estado</label
+                    >
                     <Select id="f-status" v-model="form.status">
                         <option value="">Activos</option>
                         <option value="archived">Archivados</option>
@@ -123,23 +135,27 @@ const fieldClass =
                 </div>
 
                 <div class="grid gap-1">
-                    <label for="f-sort" class="text-xs text-muted-foreground">Ordenar por</label>
+                    <label for="f-sort" class="text-muted-foreground text-xs"
+                        >Ordenar por</label
+                    >
                     <Select id="f-sort" v-model="form.sort">
                         <option value="">Nombre</option>
                         <option value="orders">Más pedidos</option>
                     </Select>
                 </div>
 
-                <div class="flex items-center gap-2 sm:col-span-2 lg:col-span-4">
+                <div
+                    class="flex items-center gap-2 sm:col-span-2 lg:col-span-4"
+                >
                     <button
                         type="submit"
-                        class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+                        class="bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90"
                     >
                         Filtrar
                     </button>
                     <button
                         type="button"
-                        class="rounded-lg border border-sidebar-border/70 px-4 py-2 text-sm font-medium hover:bg-muted dark:border-sidebar-border"
+                        class="border-sidebar-border/70 hover:bg-muted dark:border-sidebar-border rounded-lg border px-4 py-2 text-sm font-medium"
                         @click="clear"
                     >
                         Limpiar
@@ -148,49 +164,80 @@ const fieldClass =
             </div>
         </form>
 
-        <p class="text-sm text-muted-foreground">{{ clients.total }} cliente(s)</p>
+        <p class="text-muted-foreground text-sm">
+            {{ clients.total }} cliente(s)
+        </p>
 
-        <div class="overflow-x-auto rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
+        <div
+            class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border"
+        >
             <table class="w-full text-sm">
                 <thead>
-                    <tr class="border-b border-sidebar-border/70 text-left text-muted-foreground dark:border-sidebar-border">
+                    <tr
+                        class="border-sidebar-border/70 text-muted-foreground dark:border-sidebar-border border-b text-left"
+                    >
                         <th class="px-4 py-3 font-medium">Nombre</th>
                         <th class="px-4 py-3 font-medium">Teléfono</th>
-                        <th class="px-4 py-3 font-medium">Dirección principal</th>
-                        <th class="px-4 py-3 text-right font-medium">Pedidos</th>
-                        <th class="px-4 py-3 text-right font-medium">Acciones</th>
+                        <th class="px-4 py-3 font-medium">
+                            Dirección principal
+                        </th>
+                        <th class="px-4 py-3 text-right font-medium">
+                            Pedidos
+                        </th>
+                        <th class="px-4 py-3 text-right font-medium">
+                            Acciones
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="client in clients.data" :key="client.id" class="border-b border-sidebar-border/40 dark:border-sidebar-border/60">
+                    <tr
+                        v-for="client in clients.data"
+                        :key="client.id"
+                        class="border-sidebar-border/40 dark:border-sidebar-border/60 border-b"
+                    >
                         <td class="px-4 py-3 font-medium">
                             {{ client.name }}
-                            <span v-if="!client.is_active" class="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                            <span
+                                v-if="!client.is_active"
+                                class="bg-muted text-muted-foreground ml-2 rounded-full px-2 py-0.5 text-xs font-medium"
+                            >
                                 Archivado
                             </span>
                         </td>
                         <td class="px-4 py-3">{{ client.phone ?? '—' }}</td>
-                        <td class="px-4 py-3 text-muted-foreground">
+                        <td class="text-muted-foreground px-4 py-3">
                             {{ client.address ?? 'Sin dirección' }}
                         </td>
-                        <td class="px-4 py-3 text-right">{{ client.orders_count }}</td>
+                        <td class="px-4 py-3 text-right">
+                            {{ client.orders_count }}
+                        </td>
                         <td class="px-4 py-3">
                             <div class="flex items-center justify-end gap-3">
-                                <Link :href="`/clients/${client.id}/edit`" class="text-sm text-primary-strong hover:underline">
+                                <Link
+                                    :href="`/clients/${client.id}/edit`"
+                                    class="text-primary-strong text-sm hover:underline"
+                                >
                                     Editar
                                 </Link>
                                 <button
                                     type="button"
-                                    class="text-sm text-muted-foreground hover:underline"
+                                    class="text-muted-foreground text-sm hover:underline"
                                     @click="toggleArchive(client)"
                                 >
-                                    {{ client.is_active ? 'Archivar' : 'Restaurar' }}
+                                    {{
+                                        client.is_active
+                                            ? 'Archivar'
+                                            : 'Restaurar'
+                                    }}
                                 </button>
                             </div>
                         </td>
                     </tr>
                     <tr v-if="clients.data.length === 0">
-                        <td colspan="5" class="px-4 py-8 text-center text-muted-foreground">
+                        <td
+                            colspan="5"
+                            class="text-muted-foreground px-4 py-8 text-center"
+                        >
                             No hay clientes con estos filtros.
                         </td>
                     </tr>
@@ -203,13 +250,15 @@ const fieldClass =
                 <Link
                     v-if="link.url"
                     :href="link.url"
-                    class="rounded-md border border-sidebar-border/70 px-3 py-1.5 text-sm dark:border-sidebar-border"
-                    :class="{ 'bg-primary text-primary-foreground': link.active }"
+                    class="border-sidebar-border/70 dark:border-sidebar-border rounded-md border px-3 py-1.5 text-sm"
+                    :class="{
+                        'bg-primary text-primary-foreground': link.active,
+                    }"
                     v-html="link.label"
                 />
                 <span
                     v-else
-                    class="rounded-md border border-sidebar-border/40 px-3 py-1.5 text-sm text-muted-foreground"
+                    class="border-sidebar-border/40 text-muted-foreground rounded-md border px-3 py-1.5 text-sm"
                     v-html="link.label"
                 />
             </template>

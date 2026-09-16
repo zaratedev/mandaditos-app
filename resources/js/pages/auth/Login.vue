@@ -15,8 +15,7 @@ import PasskeyVerify from '@/components/PasskeyVerify.vue';
 defineOptions({
     layout: {
         title: 'Inicia sesión en tu cuenta',
-        description:
-            'Ingresa tu correo y contraseña para iniciar sesión',
+        description: 'Ingresa tu correo y contraseña para iniciar sesión',
     },
 });
 
@@ -101,6 +100,5 @@ defineProps<{
                 Iniciar sesión
             </Button>
         </div>
-
     </Form>
 </template>

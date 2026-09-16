@@ -17,7 +17,9 @@ function getCsrfToken(): string {
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const base64 = (base64String + padding)
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
     const raw = atob(base64);
     const output = new Uint8Array(raw.length);
 
@@ -36,7 +38,9 @@ async function currentSubscription(): Promise<PushSubscription | null> {
 
 onMounted(async () => {
     supported.value =
-        'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+        'serviceWorker' in navigator &&
+        'PushManager' in window &&
+        'Notification' in window;
 
     if (!supported.value) {
         return;
@@ -122,25 +126,36 @@ async function disable(): Promise<void> {
 </script>
 
 <template>
-    <div class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+    <div
+        class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4"
+    >
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
                 <p class="text-sm font-medium">Notificaciones push</p>
-                <p class="text-xs text-muted-foreground">
-                    Recibe avisos en este dispositivo aunque no tengas la app abierta.
+                <p class="text-muted-foreground text-xs">
+                    Recibe avisos en este dispositivo aunque no tengas la app
+                    abierta.
                 </p>
             </div>
 
-            <p v-if="!supported" class="text-xs text-muted-foreground">
+            <p v-if="!supported" class="text-muted-foreground text-xs">
                 Este navegador no las soporta.
             </p>
-            <p v-else-if="denied" class="text-xs text-muted-foreground">
+            <p v-else-if="denied" class="text-muted-foreground text-xs">
                 Bloqueadas en el navegador.
             </p>
-            <Button v-else-if="subscribed" variant="outline" size="sm" :disabled="busy" @click="disable">
+            <Button
+                v-else-if="subscribed"
+                variant="outline"
+                size="sm"
+                :disabled="busy"
+                @click="disable"
+            >
                 Desactivar
             </Button>
-            <Button v-else size="sm" :disabled="busy" @click="enable">Activar</Button>
+            <Button v-else size="sm" :disabled="busy" @click="enable"
+                >Activar</Button
+            >
         </div>
     </div>
 </template>

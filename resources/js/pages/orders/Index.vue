@@ -135,97 +135,141 @@ function clear(): void {
             <h1 class="text-xl font-semibold">Pedidos</h1>
             <Link
                 href="/orders/create"
-                class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+                class="bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90"
             >
                 Nuevo pedido
             </Link>
         </div>
 
         <form
-            class="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+            class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4"
             @submit.prevent="apply"
         >
-            <div class="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div
+                class="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            >
                 <div class="grid gap-1">
-                    <label for="f-status" class="text-xs text-muted-foreground">Estado</label>
+                    <label for="f-status" class="text-muted-foreground text-xs"
+                        >Estado</label
+                    >
                     <Select id="f-status" v-model="form.status">
                         <option value="">Todos</option>
-                        <option v-for="option in statuses" :key="option.value" :value="option.value">
+                        <option
+                            v-for="option in statuses"
+                            :key="option.value"
+                            :value="option.value"
+                        >
                             {{ option.label }}
                         </option>
                     </Select>
                 </div>
 
                 <div class="grid gap-1">
-                    <label for="f-courier" class="text-xs text-muted-foreground">Repartidor</label>
+                    <label for="f-courier" class="text-muted-foreground text-xs"
+                        >Repartidor</label
+                    >
                     <Select id="f-courier" v-model="form.courier_id">
                         <option value="">Todos</option>
                         <option value="unassigned">Sin asignar</option>
-                        <option v-for="courier in couriers" :key="courier.id" :value="String(courier.id)">
+                        <option
+                            v-for="courier in couriers"
+                            :key="courier.id"
+                            :value="String(courier.id)"
+                        >
                             {{ courier.name }}
                         </option>
                     </Select>
                 </div>
 
                 <div class="grid gap-1">
-                    <label for="f-client" class="text-xs text-muted-foreground">Cliente</label>
+                    <label for="f-client" class="text-muted-foreground text-xs"
+                        >Cliente</label
+                    >
                     <Select id="f-client" v-model="form.client_id">
                         <option value="">Todos</option>
-                        <option v-for="client in clients" :key="client.id" :value="String(client.id)">
+                        <option
+                            v-for="client in clients"
+                            :key="client.id"
+                            :value="String(client.id)"
+                        >
                             {{ client.name }}
                         </option>
                     </Select>
                 </div>
 
                 <div class="grid gap-1">
-                    <label for="f-pay-status" class="text-xs text-muted-foreground">Pago</label>
+                    <label
+                        for="f-pay-status"
+                        class="text-muted-foreground text-xs"
+                        >Pago</label
+                    >
                     <Select id="f-pay-status" v-model="form.payment_status">
                         <option value="">Todos</option>
-                        <option v-for="option in paymentStatuses" :key="option.value" :value="option.value">
+                        <option
+                            v-for="option in paymentStatuses"
+                            :key="option.value"
+                            :value="option.value"
+                        >
                             {{ option.label }}
                         </option>
                     </Select>
                 </div>
 
                 <div class="grid gap-1">
-                    <label for="f-pay-method" class="text-xs text-muted-foreground">Método de pago</label>
+                    <label
+                        for="f-pay-method"
+                        class="text-muted-foreground text-xs"
+                        >Método de pago</label
+                    >
                     <Select id="f-pay-method" v-model="form.payment_method">
                         <option value="">Todos</option>
-                        <option v-for="option in paymentMethods" :key="option.value" :value="option.value">
+                        <option
+                            v-for="option in paymentMethods"
+                            :key="option.value"
+                            :value="option.value"
+                        >
                             {{ option.label }}
                         </option>
                     </Select>
                 </div>
 
                 <div class="grid gap-1">
-                    <label for="f-date-field" class="text-xs text-muted-foreground">Filtrar fecha por</label>
+                    <label
+                        for="f-date-field"
+                        class="text-muted-foreground text-xs"
+                        >Filtrar fecha por</label
+                    >
                     <Select id="f-date-field" v-model="form.date_field">
-                        <option v-for="option in dateFields" :key="option.value" :value="option.value">
+                        <option
+                            v-for="option in dateFields"
+                            :key="option.value"
+                            :value="option.value"
+                        >
                             {{ option.label }}
                         </option>
                     </Select>
                 </div>
 
                 <div class="grid gap-1">
-                    <label class="text-xs text-muted-foreground">Desde</label>
+                    <label class="text-muted-foreground text-xs">Desde</label>
                     <Datepicker v-model="form.from" placeholder="Desde" />
                 </div>
 
                 <div class="grid gap-1">
-                    <label class="text-xs text-muted-foreground">Hasta</label>
+                    <label class="text-muted-foreground text-xs">Hasta</label>
                     <Datepicker v-model="form.to" placeholder="Hasta" />
                 </div>
 
                 <div class="flex items-center gap-2">
                     <button
                         type="submit"
-                        class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+                        class="bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90"
                     >
                         Filtrar
                     </button>
                     <button
                         type="button"
-                        class="rounded-lg border border-sidebar-border/70 px-4 py-2 text-sm font-medium hover:bg-muted dark:border-sidebar-border"
+                        class="border-sidebar-border/70 hover:bg-muted dark:border-sidebar-border rounded-lg border px-4 py-2 text-sm font-medium"
                         @click="clear"
                     >
                         Limpiar
@@ -234,12 +278,18 @@ function clear(): void {
             </div>
         </form>
 
-        <p class="text-sm text-muted-foreground">{{ orders.total }} pedido(s)</p>
+        <p class="text-muted-foreground text-sm">
+            {{ orders.total }} pedido(s)
+        </p>
 
-        <div class="overflow-x-auto rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
+        <div
+            class="border-sidebar-border/70 dark:border-sidebar-border overflow-x-auto rounded-xl border"
+        >
             <table class="w-full text-sm">
                 <thead>
-                    <tr class="border-b border-sidebar-border/70 text-left text-muted-foreground dark:border-sidebar-border">
+                    <tr
+                        class="border-sidebar-border/70 text-muted-foreground dark:border-sidebar-border border-b text-left"
+                    >
                         <th class="px-4 py-3 font-medium">#</th>
                         <th class="px-4 py-3 font-medium">Cliente</th>
                         <th class="px-4 py-3 font-medium">Repartidor</th>
@@ -253,12 +303,14 @@ function clear(): void {
                     <tr
                         v-for="order in orders.data"
                         :key="order.id"
-                        class="cursor-pointer border-b border-sidebar-border/40 hover:bg-muted/50 dark:border-sidebar-border/60"
+                        class="border-sidebar-border/40 hover:bg-muted/50 dark:border-sidebar-border/60 cursor-pointer border-b"
                         @click="router.visit(`/orders/${order.id}`)"
                     >
                         <td class="px-4 py-3 font-medium">#{{ order.id }}</td>
                         <td class="px-4 py-3">{{ order.client ?? '—' }}</td>
-                        <td class="px-4 py-3">{{ order.courier ?? 'Sin asignar' }}</td>
+                        <td class="px-4 py-3">
+                            {{ order.courier ?? 'Sin asignar' }}
+                        </td>
                         <td class="px-4 py-3">
                             <span
                                 class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
@@ -267,7 +319,9 @@ function clear(): void {
                                 {{ order.status_label }}
                             </span>
                         </td>
-                        <td class="px-4 py-3 text-right">{{ money(order.total) }}</td>
+                        <td class="px-4 py-3 text-right">
+                            {{ money(order.total) }}
+                        </td>
                         <td class="px-4 py-3">
                             <span
                                 class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
@@ -276,10 +330,15 @@ function clear(): void {
                                 {{ order.payment_status_label }}
                             </span>
                         </td>
-                        <td class="px-4 py-3 text-muted-foreground">{{ order.created_at ?? '—' }}</td>
+                        <td class="text-muted-foreground px-4 py-3">
+                            {{ order.created_at ?? '—' }}
+                        </td>
                     </tr>
                     <tr v-if="orders.data.length === 0">
-                        <td colspan="7" class="px-4 py-8 text-center text-muted-foreground">
+                        <td
+                            colspan="7"
+                            class="text-muted-foreground px-4 py-8 text-center"
+                        >
                             No hay pedidos con estos filtros.
                         </td>
                     </tr>
@@ -288,7 +347,7 @@ function clear(): void {
         </div>
 
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center gap-2 text-sm text-muted-foreground">
+            <div class="text-muted-foreground flex items-center gap-2 text-sm">
                 <span>Mostrar</span>
                 <div class="w-24">
                     <Select
@@ -312,13 +371,15 @@ function clear(): void {
                     <Link
                         v-if="link.url"
                         :href="link.url"
-                        class="rounded-md border border-sidebar-border/70 px-3 py-1.5 text-sm dark:border-sidebar-border"
-                        :class="{ 'bg-primary text-primary-foreground': link.active }"
+                        class="border-sidebar-border/70 dark:border-sidebar-border rounded-md border px-3 py-1.5 text-sm"
+                        :class="{
+                            'bg-primary text-primary-foreground': link.active,
+                        }"
                         v-html="link.label"
                     />
                     <span
                         v-else
-                        class="rounded-md border border-sidebar-border/40 px-3 py-1.5 text-sm text-muted-foreground"
+                        class="border-sidebar-border/40 text-muted-foreground rounded-md border px-3 py-1.5 text-sm"
                         v-html="link.label"
                     />
                 </template>

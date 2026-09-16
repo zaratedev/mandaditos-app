@@ -71,10 +71,13 @@ const selectedClient = computed<Client | undefined>(() =>
     props.clients.find((client) => client.id === Number(form.client_id)),
 );
 
-const addresses = computed<Address[]>(() => selectedClient.value?.addresses ?? []);
+const addresses = computed<Address[]>(
+    () => selectedClient.value?.addresses ?? [],
+);
 
 function onClientChange(): void {
-    form.address_id = addresses.value.length === 1 ? String(addresses.value[0].id) : '';
+    form.address_id =
+        addresses.value.length === 1 ? String(addresses.value[0].id) : '';
 }
 
 function addItem(): void {
@@ -113,24 +116,46 @@ const areaClass =
             <div class="grid items-start gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
                     <Label for="client_id">Cliente</Label>
-                    <Select id="client_id" v-model="form.client_id" @change="onClientChange">
+                    <Select
+                        id="client_id"
+                        v-model="form.client_id"
+                        @change="onClientChange"
+                    >
                         <option value="" disabled>Selecciona un cliente</option>
-                        <option v-for="client in clients" :key="client.id" :value="client.id">
+                        <option
+                            v-for="client in clients"
+                            :key="client.id"
+                            :value="client.id"
+                        >
                             {{ client.name }}
                         </option>
                     </Select>
                     <InputError :message="form.errors.client_id" />
-                    <Link href="/clients/create" class="text-xs text-muted-foreground underline">
+                    <Link
+                        href="/clients/create"
+                        class="text-muted-foreground text-xs underline"
+                    >
                         ¿Cliente nuevo? Regístralo aquí
                     </Link>
                 </div>
 
                 <div class="grid gap-2">
                     <Label for="address_id">Dirección de entrega</Label>
-                    <Select id="address_id" v-model="form.address_id" :disabled="!selectedClient">
-                        <option value="" disabled>Selecciona una dirección</option>
-                        <option v-for="address in addresses" :key="address.id" :value="address.id">
-                            {{ address.label ? `${address.label} — ` : '' }}{{ address.street }}
+                    <Select
+                        id="address_id"
+                        v-model="form.address_id"
+                        :disabled="!selectedClient"
+                    >
+                        <option value="" disabled>
+                            Selecciona una dirección
+                        </option>
+                        <option
+                            v-for="address in addresses"
+                            :key="address.id"
+                            :value="address.id"
+                        >
+                            {{ address.label ? `${address.label} — ` : ''
+                            }}{{ address.street }}
                         </option>
                     </Select>
                     <InputError :message="form.errors.address_id" />
@@ -138,7 +163,9 @@ const areaClass =
             </div>
 
             <div class="grid gap-2">
-                <Label for="shopping_list">Lista de compra (tal cual la mandó el cliente)</Label>
+                <Label for="shopping_list"
+                    >Lista de compra (tal cual la mandó el cliente)</Label
+                >
                 <textarea
                     id="shopping_list"
                     v-model="form.shopping_list"
@@ -153,7 +180,12 @@ const areaClass =
             <div class="space-y-3">
                 <div class="flex items-center justify-between">
                     <Label>Desglose de productos (opcional)</Label>
-                    <Button type="button" variant="outline" size="sm" @click="addItem">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        @click="addItem"
+                    >
                         Agregar producto
                     </Button>
                 </div>
@@ -164,31 +196,75 @@ const areaClass =
                     class="grid grid-cols-12 items-end gap-2"
                 >
                     <div class="col-span-6 grid gap-1">
-                        <Label :for="`item-name-${index}`" class="text-xs">Producto</Label>
-                        <Input :id="`item-name-${index}`" v-model="item.name" placeholder="Nombre" />
+                        <Label :for="`item-name-${index}`" class="text-xs"
+                            >Producto</Label
+                        >
+                        <Input
+                            :id="`item-name-${index}`"
+                            v-model="item.name"
+                            placeholder="Nombre"
+                        />
                     </div>
                     <div class="col-span-2 grid gap-1">
-                        <Label :for="`item-qty-${index}`" class="text-xs">Cant.</Label>
-                        <input :id="`item-qty-${index}`" v-model.number="item.quantity" type="number" min="0.01" step="0.01" :class="fieldClass" />
+                        <Label :for="`item-qty-${index}`" class="text-xs"
+                            >Cant.</Label
+                        >
+                        <input
+                            :id="`item-qty-${index}`"
+                            v-model.number="item.quantity"
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            :class="fieldClass"
+                        />
                     </div>
                     <div class="col-span-3 grid gap-1">
-                        <Label :for="`item-price-${index}`" class="text-xs">Precio</Label>
-                        <input :id="`item-price-${index}`" v-model.number="item.unit_price" type="number" min="0" step="0.01" :class="fieldClass" />
+                        <Label :for="`item-price-${index}`" class="text-xs"
+                            >Precio</Label
+                        >
+                        <input
+                            :id="`item-price-${index}`"
+                            v-model.number="item.unit_price"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            :class="fieldClass"
+                        />
                     </div>
                     <div class="col-span-1">
-                        <Button type="button" variant="ghost" size="sm" @click="removeItem(index)">✕</Button>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            @click="removeItem(index)"
+                            >✕</Button
+                        >
                     </div>
                 </div>
 
-                <p v-if="form.items.length > 0" class="text-right text-sm text-muted-foreground">
-                    Subtotal estimado: <span class="font-medium">{{ money(estimatedSubtotal) }}</span>
+                <p
+                    v-if="form.items.length > 0"
+                    class="text-muted-foreground text-right text-sm"
+                >
+                    Subtotal estimado:
+                    <span class="font-medium">{{
+                        money(estimatedSubtotal)
+                    }}</span>
                 </p>
             </div>
 
             <div class="grid items-start gap-4 sm:grid-cols-2">
                 <div class="grid gap-2">
                     <Label for="commission">Comisión</Label>
-                    <input id="commission" v-model.number="form.commission" type="number" min="0" step="0.01" placeholder="0.00" :class="fieldClass" />
+                    <input
+                        id="commission"
+                        v-model.number="form.commission"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        :class="fieldClass"
+                    />
                     <InputError :message="form.errors.commission" />
                 </div>
 
@@ -196,7 +272,11 @@ const areaClass =
                     <Label for="courier_id">Repartidor (opcional)</Label>
                     <Select id="courier_id" v-model="form.courier_id">
                         <option value="">Sin asignar</option>
-                        <option v-for="courier in couriers" :key="courier.id" :value="courier.id">
+                        <option
+                            v-for="courier in couriers"
+                            :key="courier.id"
+                            :value="courier.id"
+                        >
                             {{ courier.name }}
                         </option>
                     </Select>
@@ -206,13 +286,22 @@ const areaClass =
 
             <div class="grid gap-2">
                 <Label for="notes">Notas (opcional)</Label>
-                <textarea id="notes" v-model="form.notes" rows="2" :class="areaClass"></textarea>
+                <textarea
+                    id="notes"
+                    v-model="form.notes"
+                    rows="2"
+                    :class="areaClass"
+                ></textarea>
                 <InputError :message="form.errors.notes" />
             </div>
 
             <div class="flex items-center gap-3">
-                <Button type="submit" :disabled="form.processing">Guardar pedido</Button>
-                <Link href="/orders" class="text-sm text-muted-foreground">Cancelar</Link>
+                <Button type="submit" :disabled="form.processing"
+                    >Guardar pedido</Button
+                >
+                <Link href="/orders" class="text-muted-foreground text-sm"
+                    >Cancelar</Link
+                >
             </div>
         </form>
     </div>

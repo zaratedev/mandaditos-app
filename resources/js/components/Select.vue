@@ -39,17 +39,23 @@ function onChange(event: Event): void {
             :id="id"
             :value="modelValue ?? ''"
             :disabled="disabled"
-            class="h-9 w-full appearance-none rounded-md border border-input bg-transparent py-1 pr-9 pl-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+            class="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full appearance-none rounded-md border bg-transparent py-1 pr-9 pl-3 text-sm shadow-xs outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
             @change="onChange"
         >
-            <option v-if="placeholder" value="" disabled>{{ placeholder }}</option>
-            <option v-for="option in options" :key="option.value" :value="option.value">
+            <option v-if="placeholder" value="" disabled>
+                {{ placeholder }}
+            </option>
+            <option
+                v-for="option in options"
+                :key="option.value"
+                :value="option.value"
+            >
                 {{ option.label }}
             </option>
             <slot />
         </select>
         <ChevronDown
-            class="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground"
+            class="text-muted-foreground pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2"
         />
     </div>
 </template>

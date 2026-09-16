@@ -68,27 +68,47 @@ function submit(): void {
 
             <div class="grid gap-2">
                 <Label for="notes">Notas (opcional)</Label>
-                <textarea id="notes" v-model="form.notes" rows="2" :class="inputClass"></textarea>
+                <textarea
+                    id="notes"
+                    v-model="form.notes"
+                    rows="2"
+                    :class="inputClass"
+                ></textarea>
                 <InputError :message="form.errors.notes" />
             </div>
 
-            <div class="space-y-4 rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+            <div
+                class="border-sidebar-border/70 dark:border-sidebar-border space-y-4 rounded-xl border p-4"
+            >
                 <h2 class="text-base font-semibold">Dirección</h2>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div class="grid gap-2">
                         <Label for="label">Etiqueta (opcional)</Label>
-                        <Input id="label" v-model="form.address.label" placeholder="Casa, Trabajo..." />
+                        <Input
+                            id="label"
+                            v-model="form.address.label"
+                            placeholder="Casa, Trabajo..."
+                        />
                         <InputError :message="form.errors['address.label']" />
                     </div>
                     <div class="grid gap-2">
                         <Label for="street">Calle y número</Label>
-                        <Input id="street" v-model="form.address.street" required />
+                        <Input
+                            id="street"
+                            v-model="form.address.street"
+                            required
+                        />
                         <InputError :message="form.errors['address.street']" />
                     </div>
                     <div class="grid gap-2">
                         <Label for="neighborhood">Colonia</Label>
-                        <Input id="neighborhood" v-model="form.address.neighborhood" />
-                        <InputError :message="form.errors['address.neighborhood']" />
+                        <Input
+                            id="neighborhood"
+                            v-model="form.address.neighborhood"
+                        />
+                        <InputError
+                            :message="form.errors['address.neighborhood']"
+                        />
                     </div>
                     <div class="grid gap-2">
                         <Label for="city">Ciudad</Label>
@@ -98,14 +118,20 @@ function submit(): void {
                     <div class="grid gap-2 sm:col-span-2">
                         <Label for="landmark">Referencias para llegar</Label>
                         <Input id="landmark" v-model="form.address.landmark" />
-                        <InputError :message="form.errors['address.landmark']" />
+                        <InputError
+                            :message="form.errors['address.landmark']"
+                        />
                     </div>
                 </div>
             </div>
 
             <div class="flex items-center gap-3">
-                <Button type="submit" :disabled="form.processing">Guardar cliente</Button>
-                <Link href="/clients" class="text-sm text-muted-foreground">Cancelar</Link>
+                <Button type="submit" :disabled="form.processing"
+                    >Guardar cliente</Button
+                >
+                <Link href="/clients" class="text-muted-foreground text-sm"
+                    >Cancelar</Link
+                >
             </div>
         </form>
     </div>
