@@ -12,6 +12,7 @@ use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -20,6 +21,27 @@ use Inertia\Response;
  */
 class DashboardController extends Controller
 {
+    /**
+     * How the orders-over-time chart can be sliced. "day" and "month" are windows
+     * ending today; "custom" is whatever range the admin picked.
+     */
+    private const CHART_PERIODS = ['day', 'month', 'custom'];
+
+    private const CHART_DAYS = 14;
+
+    private const CHART_MONTHS = 12;
+
+    /**
+     * Past this many days a range stops reading as daily bars and gets rolled up
+     * into months instead.
+     */
+    private const CHART_MAX_DAILY_BARS = 62;
+
+    /**
+     * A range nobody can read is a range nobody asked for.
+     */
+    private const CHART_MAX_YEARS = 5;
+
     /**
      * How close each open status is to delivery. Higher wins when picking what the
      * courier should look at first.
@@ -54,6 +76,12 @@ class DashboardController extends Controller
             return Inertia::render('Dashboard', $this->courierPanel($user));
         }
 
+        $request->validate([
+            'period' => ['nullable', Rule::in(self::CHART_PERIODS)],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+        ]);
+
         $today = today();
 
         $statusCounts = Order::query()
@@ -69,30 +97,6 @@ class DashboardController extends Controller
                 'count' => (int) ($statusCounts[$status->value] ?? 0),
             ])
             ->values();
-
-        $since = $today->copy()->subDays(13);
-
-        $perDay = Order::query()
-            ->where('created_at', '>=', $since->startOfDay())
-            ->selectRaw('DATE(created_at) as day')
-            ->selectRaw('COUNT(*) as orders_count')
-            ->selectRaw("SUM(CASE WHEN payment_status = 'paid' THEN total ELSE 0 END) as revenue")
-            ->groupBy('day')
-            ->toBase()
-            ->get()
-            ->keyBy('day');
-
-        $ordersPerDay = collect(range(0, 13))
-            ->map(function (int $offset) use ($since, $perDay): array {
-                $date = $since->addDays($offset)->toDateString();
-                $row = $perDay->get($date);
-
-                return [
-                    'day' => $date,
-                    'orders' => $row ? (int) $row->orders_count : 0,
-                    'revenue' => $row ? round((float) $row->revenue, 2) : 0.0,
-                ];
-            });
 
         $stats = [
             'today' => Order::whereDate('created_at', $today)->count(),
@@ -115,10 +119,90 @@ class DashboardController extends Controller
             'today' => $today->toDateString(),
             'stats' => $stats,
             'openByStatus' => $openByStatus,
-            'ordersPerDay' => $ordersPerDay,
+            'ordersChart' => $this->ordersChart($request, $today),
             'corte' => $corte,
             'corteTotals' => $corteTotals,
         ]);
+    }
+
+    /**
+     * Orders over time. The admin picks the window; how the window is bucketed is
+     * not their problem, so a range too long to read as daily bars comes back as
+     * months instead, and the response says which so the chart can label it.
+     *
+     * @return array{period: string, unit: string, from: string, to: string, points: list<array{date: string, orders: int, revenue: float}>}
+     */
+    private function ordersChart(Request $request, CarbonInterface $today): array
+    {
+        $period = $request->string('period')->toString();
+        $period = in_array($period, self::CHART_PERIODS, true) ? $period : 'day';
+
+        [$from, $to] = match ($period) {
+            'month' => [$today->startOfMonth()->subMonths(self::CHART_MONTHS - 1), $today],
+            'custom' => $this->customChartRange($request, $today),
+            default => [$today->subDays(self::CHART_DAYS - 1), $today],
+        };
+
+        $unit = $period === 'month' || $from->diffInDays($to) >= self::CHART_MAX_DAILY_BARS
+            ? 'month'
+            : 'day';
+
+        $totals = Order::query()
+            ->whereBetween('created_at', [$from->startOfDay(), $to->endOfDay()])
+            ->selectRaw('DATE(created_at) as day')
+            ->selectRaw('COUNT(*) as orders_count')
+            ->selectRaw("SUM(CASE WHEN payment_status = 'paid' THEN total ELSE 0 END) as revenue")
+            ->groupBy('day')
+            ->toBase()
+            ->get()
+            ->groupBy(fn (object $row): string => $unit === 'month'
+                ? substr((string) $row->day, 0, 7)
+                : (string) $row->day);
+
+        $points = [];
+        $cursor = $unit === 'month' ? $from->startOfMonth() : $from->startOfDay();
+        $last = $unit === 'month' ? $to->startOfMonth() : $to->startOfDay();
+
+        while ($cursor->lessThanOrEqualTo($last)) {
+            $bucket = $totals->get($cursor->format($unit === 'month' ? 'Y-m' : 'Y-m-d'));
+
+            $points[] = [
+                'date' => $cursor->toDateString(),
+                'orders' => (int) ($bucket?->sum(fn (object $row): int => (int) $row->orders_count) ?? 0),
+                'revenue' => round((float) ($bucket?->sum(fn (object $row): float => (float) $row->revenue) ?? 0), 2),
+            ];
+
+            $cursor = $unit === 'month' ? $cursor->addMonth() : $cursor->addDay();
+        }
+
+        return [
+            'period' => $period,
+            'unit' => $unit,
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'points' => $points,
+        ];
+    }
+
+    /**
+     * The range behind the custom period: whatever the admin picked, put back in
+     * order if they picked it backwards and trimmed to something a chart can still
+     * draw. Both ends show in the UI, so the trimming is never a silent one.
+     *
+     * @return array{0: CarbonInterface, 1: CarbonInterface}
+     */
+    private function customChartRange(Request $request, CarbonInterface $today): array
+    {
+        $from = $request->date('from') ?? $today->subDays(self::CHART_DAYS - 1);
+        $to = $request->date('to') ?? $today;
+
+        if ($from->greaterThan($to)) {
+            [$from, $to] = [$to, $from];
+        }
+
+        $earliest = $to->subYears(self::CHART_MAX_YEARS);
+
+        return [$from->lessThan($earliest) ? $earliest : $from, $to];
     }
 
     /**

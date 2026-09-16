@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Chart, registerables } from 'chart.js';
+import { Chart, registerables, type Plugin, type TooltipItem } from 'chart.js';
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 Chart.register(...registerables);
@@ -26,6 +26,35 @@ function isDark(): boolean {
     return document.documentElement.classList.contains('dark');
 }
 
+/**
+ * Writes each count at the end of its bar. Reading a horizontal bar against the
+ * axis is guesswork at these sizes, and the exact number is the whole point of the
+ * panel: how many orders are sitting in this status right now.
+ */
+function countLabels(color: string): Plugin<'bar'> {
+    return {
+        id: 'countLabels',
+        afterDatasetsDraw(instance): void {
+            const { ctx } = instance;
+
+            ctx.save();
+            ctx.fillStyle = color;
+            ctx.font = `600 11px ${Chart.defaults.font.family}`;
+            ctx.textBaseline = 'middle';
+
+            instance.getDatasetMeta(0).data.forEach((bar, index) => {
+                ctx.fillText(
+                    String(props.data[index]?.count ?? 0),
+                    bar.x + 6,
+                    bar.y,
+                );
+            });
+
+            ctx.restore();
+        },
+    };
+}
+
 function render(): void {
     if (!canvas.value) {
         return;
@@ -40,7 +69,6 @@ function render(): void {
     // fill alone is already at 14:1 and needs no help.
     const barColor = '#fed61c';
     const barBorder = dark ? 'transparent' : '#a38600';
-    const barBorderWidth = dark ? 0 : 1;
     const muted = '#898781';
     const grid = dark ? 'rgba(255,255,255,0.08)' : 'rgba(11,11,11,0.06)';
 
@@ -50,21 +78,25 @@ function render(): void {
             labels: props.data.map((point) => point.label),
             datasets: [
                 {
-                    label: 'Pedidos',
+                    label: 'Pedidos abiertos',
                     data: props.data.map((point) => point.count),
                     backgroundColor: barColor,
                     borderColor: barBorder,
-                    borderWidth: barBorderWidth,
                     borderSkipped: false,
                     borderRadius: 4,
                     maxBarThickness: 22,
                 },
             ],
         },
+        plugins: [countLabels(muted)],
         options: {
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
+            elements: { bar: { borderWidth: dark ? 0 : 1 } },
+            // The whole row answers to the pointer, not just the bar: a status with
+            // one order draws a sliver nobody can hit.
+            interaction: { mode: 'index', intersect: false },
             // A bar is a filtered slice of the order list, so clicking it should open
             // that slice. The cursor is the only hint the canvas can give.
             onClick: (_event, elements) => {
@@ -84,11 +116,19 @@ function render(): void {
             },
             plugins: {
                 legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (item: TooltipItem<'bar'>): string =>
+                            `${props.data[item.dataIndex]?.count ?? 0} pedidos`,
+                    },
+                },
             },
             scales: {
                 x: {
                     beginAtZero: true,
-                    ticks: { color: muted, precision: 0, stepSize: 1 },
+                    // Room at the end of the longest bar for its count to sit in.
+                    grace: '12%',
+                    ticks: { color: muted, precision: 0 },
                     grid: { color: grid },
                 },
                 y: {

@@ -44,16 +44,66 @@ export function shortDayMonth(value: string | null | undefined): string {
     return month && day ? `${day}/${month}` : value;
 }
 
+const shortMonthFormatter = new Intl.DateTimeFormat('es-MX', {
+    month: 'short',
+    year: '2-digit',
+});
+
+const longMonthFormatter = new Intl.DateTimeFormat('es-MX', {
+    month: 'long',
+    year: 'numeric',
+});
+
+/**
+ * A month from a Y-m-d value, for axis labels where space is tight: sept 26.
+ */
+export function shortMonth(value: string | null | undefined): string {
+    const date = monthStart(value);
+
+    return date ? shortMonthFormatter.format(date) : '';
+}
+
+/**
+ * The same month written out, for tooltips: septiembre de 2026.
+ */
+export function longMonth(value: string | null | undefined): string {
+    const date = monthStart(value);
+
+    return date ? longMonthFormatter.format(date) : '—';
+}
+
+/**
+ * Built from the parts rather than parsed, so a bare Y-m-d is never shifted into
+ * the previous month by the browser timezone.
+ */
+function monthStart(value: string | null | undefined): Date | null {
+    if (!value) {
+        return null;
+    }
+
+    const [year, month] = value.split('-').map(Number);
+
+    return year && month ? new Date(year, month - 1, 1) : null;
+}
+
 export function statusBadgeClass(status: string): string {
     const map: Record<string, string> = {
-        requested: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-        confirmed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-        assigned: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
-        purchasing: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-        purchased: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300',
-        on_the_way: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
-        delivered: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
-        cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+        requested:
+            'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+        confirmed:
+            'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+        assigned:
+            'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+        purchasing:
+            'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+        purchased:
+            'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300',
+        on_the_way:
+            'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+        delivered:
+            'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+        cancelled:
+            'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
     };
 
     return map[status] ?? map.requested;

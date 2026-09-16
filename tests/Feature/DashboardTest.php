@@ -83,6 +83,96 @@ test('every admin stat links to an order list holding the same orders', function
     }
 });
 
+test('the orders chart covers the last fourteen days by default', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $client = Client::factory()->create();
+    $address = Address::factory()->for($client)->create();
+
+    $base = ['client_id' => $client->id, 'address_id' => $address->id, 'created_by' => $admin->id];
+
+    Order::factory()->count(2)->create([...$base, 'created_at' => now()]);
+    Order::factory()->create([...$base, 'created_at' => now()->subDays(13)]);
+    // Just outside the window: it must not show up anywhere in the series.
+    Order::factory()->create([...$base, 'created_at' => now()->subDays(14)]);
+
+    $this->actingAs($admin)->get('/dashboard')
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('ordersChart.period', 'day')
+            ->where('ordersChart.unit', 'day')
+            ->where('ordersChart.from', today()->subDays(13)->toDateString())
+            ->where('ordersChart.to', today()->toDateString())
+            ->has('ordersChart.points', 14)
+            ->where('ordersChart.points.0.orders', 1)
+            ->where('ordersChart.points.13.orders', 2));
+});
+
+test('the month period buckets a year of orders by month', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $client = Client::factory()->create();
+    $address = Address::factory()->for($client)->create();
+
+    $base = ['client_id' => $client->id, 'address_id' => $address->id, 'created_by' => $admin->id];
+
+    Order::factory()->count(3)->create([...$base, 'created_at' => today()->startOfMonth()]);
+    Order::factory()->count(2)->create([...$base, 'created_at' => today()->startOfMonth()->subMonths(2)]);
+
+    $this->actingAs($admin)->get('/dashboard?period=month')
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('ordersChart.unit', 'month')
+            ->where('ordersChart.from', today()->startOfMonth()->subMonths(11)->toDateString())
+            ->has('ordersChart.points', 12)
+            ->where('ordersChart.points.11.orders', 3)
+            ->where('ordersChart.points.9.orders', 2));
+});
+
+test('a custom range is honoured, and put back in order when picked backwards', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $client = Client::factory()->create();
+    $address = Address::factory()->for($client)->create();
+
+    $base = ['client_id' => $client->id, 'address_id' => $address->id, 'created_by' => $admin->id];
+
+    Order::factory()->create([...$base, 'created_at' => now()->subDays(2)]);
+    Order::factory()->create([...$base, 'created_at' => now()->subDays(9)]);
+
+    $from = today()->subDays(3)->toDateString();
+    $to = today()->toDateString();
+
+    $expected = fn (Assert $page) => $page
+        ->where('ordersChart.period', 'custom')
+        ->where('ordersChart.unit', 'day')
+        ->where('ordersChart.from', $from)
+        ->where('ordersChart.to', $to)
+        ->has('ordersChart.points', 4)
+        ->where('ordersChart.points.1.orders', 1);
+
+    $this->actingAs($admin)->get("/dashboard?period=custom&from={$from}&to={$to}")
+        ->assertInertia($expected);
+
+    // Same two dates, handed over the wrong way round.
+    $this->actingAs($admin)->get("/dashboard?period=custom&from={$to}&to={$from}")
+        ->assertInertia($expected);
+});
+
+test('a custom range too long to read as days comes back as months', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+
+    $from = today()->subDays(200)->toDateString();
+    $to = today()->toDateString();
+
+    $this->actingAs($admin)->get("/dashboard?period=custom&from={$from}&to={$to}")
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('ordersChart.unit', 'month')
+            ->where('ordersChart.from', $from)
+            ->where('ordersChart.to', $to));
+});
+
+test('an unknown chart period is rejected', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+
+    $this->actingAs($admin)->get('/dashboard?period=decade')->assertSessionHasErrors('period');
+});
+
 test('the courier panel surfaces the order closest to delivery', function () {
     $admin = User::factory()->create(['role' => UserRole::Admin]);
     $courier = User::factory()->create(['role' => UserRole::Courier]);

@@ -156,7 +156,7 @@ test('admin can view the dashboard with the daily cash cut', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('Dashboard')
             ->where('isAdmin', true)
-            ->has('ordersPerDay', 14)
+            ->has('ordersChart.points', 14)
             ->has('openByStatus')
         );
 });
