@@ -57,6 +57,39 @@ const errors = computed(
         (page.props.errors ?? {}) as Record<string, string>,
 );
 
+const fieldKeys = [
+    'customer_name',
+    'phone',
+    'street',
+    'neighborhood',
+    'city',
+    'landmark',
+    'notes',
+    'items',
+];
+
+/**
+ * Anything the server rejected that has no input on screen to hang off — the
+ * honeypot above all. Without this the form would bounce back and simply sit
+ * there, refusing to send and never saying why.
+ */
+const generalErrors = computed((): string[] =>
+    Object.entries(errors.value)
+        .filter(
+            ([key]) => !fieldKeys.includes(key) && !key.startsWith('items.'),
+        )
+        .map(([, message]) => message),
+);
+
+// A password manager can autofill the hidden field and lock a real customer out
+// of a form whose error they cannot see. Clearing it lets the retry go through;
+// a bot filling it again just gets rejected again.
+watch(errors, (bag) => {
+    if (bag.company !== undefined) {
+        form.company = '';
+    }
+});
+
 function addItem(): void {
     form.items.push('');
 }
@@ -130,6 +163,24 @@ const fieldClass =
             </section>
 
             <form v-else class="flex flex-col gap-4" @submit.prevent="submit">
+                <div
+                    v-if="generalErrors.length > 0"
+                    class="rounded-md border border-red-200 bg-red-50 p-3 dark:border-red-200/20 dark:bg-red-700/10"
+                >
+                    <p
+                        class="text-sm font-medium text-red-600 dark:text-red-500"
+                    >
+                        No pudimos enviar tu pedido.
+                    </p>
+                    <p
+                        v-for="(message, index) in generalErrors"
+                        :key="index"
+                        class="mt-1 text-sm text-red-600 dark:text-red-500"
+                    >
+                        {{ message }}
+                    </p>
+                </div>
+
                 <div class="grid gap-2">
                     <Label for="customer_name">Tu nombre</Label>
                     <Input
@@ -251,11 +302,12 @@ const fieldClass =
                     <InputError :message="errors.notes" />
                 </div>
 
-                <!-- Off-screen rather than display:none, which some bots skip. -->
-                <div
-                    class="absolute -left-[9999px] h-0 w-0 overflow-hidden"
-                    aria-hidden="true"
-                >
+                <!--
+                    Clipped rather than display:none, which some bots skip — and
+                    clipped rather than parked at -9999px, which stretches the
+                    document and pushes the card off a phone screen.
+                -->
+                <div class="sr-only" aria-hidden="true">
                     <label for="company">Empresa</label>
                     <input
                         id="company"
