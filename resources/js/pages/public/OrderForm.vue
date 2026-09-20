@@ -165,17 +165,17 @@ const fieldClass =
             <form v-else class="flex flex-col gap-4" @submit.prevent="submit">
                 <div
                     v-if="generalErrors.length > 0"
-                    class="rounded-md border border-red-200 bg-red-50 p-3 dark:border-red-200/20 dark:bg-red-700/10"
+                    class="space-y-1 rounded-md border border-red-200 bg-red-50 p-3 dark:border-red-200/20 dark:bg-red-700/10"
                 >
-                    <p
-                        class="text-sm font-medium text-red-600 dark:text-red-500"
-                    >
-                        No pudimos enviar tu pedido.
-                    </p>
+                    <!--
+                        Only what the server said. It writes these for the customer
+                        now, so a heading of our own would just say the same thing
+                        twice in a row.
+                    -->
                     <p
                         v-for="(message, index) in generalErrors"
                         :key="index"
-                        class="mt-1 text-sm text-red-600 dark:text-red-500"
+                        class="text-sm text-red-600 dark:text-red-500"
                     >
                         {{ message }}
                     </p>
