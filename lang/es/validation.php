@@ -142,8 +142,9 @@ return [
     'uuid' => 'El campo :attribute debe ser un UUID válido.',
 
     'custom' => [
-        'attribute-name' => [
-            'rule-name' => 'custom-message',
+        'company' => [
+            // Honeypot: solo un bot (o un autocompletado) lo dispara; mensaje humano.
+            'prohibited' => 'No pudimos enviar el formulario. Vuelve a intentarlo.',
         ],
     ],
 
@@ -170,5 +171,13 @@ return [
         'items.*.name' => 'producto',
         'items.*.quantity' => 'cantidad',
         'items.*.unit_price' => 'precio',
+        // Portal público de pedidos (campos planos).
+        'customer_name' => 'nombre',
+        'street' => 'calle',
+        'neighborhood' => 'colonia',
+        'city' => 'ciudad',
+        'landmark' => 'referencias',
+        'items' => 'lista de productos',
+        'items.*' => 'producto',
     ],
 ];
