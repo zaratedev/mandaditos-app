@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\OrderSource;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
@@ -18,10 +19,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
+ * @property int|null $tenant_id
  * @property int $client_id
  * @property int $address_id
  * @property int|null $courier_id
  * @property OrderStatus $status
+ * @property OrderSource $source
  * @property string $shopping_list
  * @property PaymentMethod|null $payment_method
  * @property PaymentStatus $payment_status
@@ -40,10 +43,12 @@ class Order extends Model
     use HasFactory;
 
     protected $fillable = [
+        'tenant_id',
         'client_id',
         'address_id',
         'courier_id',
         'status',
+        'source',
         'shopping_list',
         'items_subtotal',
         'commission',
@@ -65,6 +70,7 @@ class Order extends Model
     {
         return [
             'status' => OrderStatus::class,
+            'source' => OrderSource::class,
             'payment_method' => PaymentMethod::class,
             'payment_status' => PaymentStatus::class,
             'items_subtotal' => 'decimal:2',
@@ -88,6 +94,14 @@ class Order extends Model
     protected function open(Builder $query): void
     {
         $query->whereNotIn('status', [OrderStatus::Delivered->value, OrderStatus::Cancelled->value]);
+    }
+
+    /**
+     * @return BelongsTo<Business, $this>
+     */
+    public function business(): BelongsTo
+    {
+        return $this->belongsTo(Business::class, 'tenant_id');
     }
 
     /**

@@ -9,6 +9,7 @@ use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\UserRole;
 use App\Models\Address;
+use App\Models\Business;
 use App\Models\Client;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -25,6 +26,11 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $business = Business::factory()->create([
+            'name' => 'Rivers',
+            'slug' => 'rivers',
+        ]);
+
         $admin = User::factory()->create([
             'name' => 'Admin',
             'email' => 'admin@mandaditos.test',
@@ -88,5 +94,11 @@ class DatabaseSeeder extends Seeder
                 'status' => fake()->randomElement([OrderStatus::Assigned, OrderStatus::Purchasing]),
             ]);
         });
+
+        // Single-tenant pilot: everything seeded belongs to the one business.
+        User::query()->update(['tenant_id' => $business->id]);
+        Client::query()->update(['tenant_id' => $business->id]);
+        Address::query()->update(['tenant_id' => $business->id]);
+        Order::query()->update(['tenant_id' => $business->id]);
     }
 }

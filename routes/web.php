@@ -6,11 +6,20 @@ use App\Http\Controllers\CourierController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PublicOrderController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
+
+// Public self-service order portal (Fase 3). Path-based tenant for the pilot
+// (/rivers/pedido); the subdomain form (rivers.mandaditos.app/pedido) lands in Fase 3c.
+Route::get('/{business:slug}/pedido', [PublicOrderController::class, 'create'])
+    ->name('public.orders.create');
+Route::post('/{business:slug}/pedido', [PublicOrderController::class, 'store'])
+    ->middleware('throttle:20,1')
+    ->name('public.orders.store');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');

@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
+ * @property int|null $tenant_id
  * @property string $name
  * @property string|null $phone
  * @property bool $is_active
@@ -24,6 +25,7 @@ class Client extends Model
     use HasFactory;
 
     protected $fillable = [
+        'tenant_id',
         'name',
         'phone',
         'notes',
