@@ -1,7 +1,7 @@
 # Mandaditos app — Propuesta y Documento de Descubrimiento (MVP)
 
-> Documento base del proyecto. **Fases 1 y 2 completadas.** Siguiente: **Fase 3** (integración WhatsApp, portal de cliente).
-> Fecha: 2026-09-08 · Autor: equipo técnico (Sandslash) · Estado: **Fases 1 y 2 completadas**
+> Documento base del proyecto. **Fases 1 y 2 completadas.** Siguiente: **Fase 3** — portal público de pedidos (self-service) + base multi-tenant (§18).
+> Fecha: 2026-09-16 · Autor: equipo técnico (Sandslash) · Estado: **Fases 1 y 2 completadas; Fase 3 planeada**
 >
 > **Convención dura del proyecto:** toda la **arquitectura y el código en inglés**
 > (tablas, columnas, modelos, enums, rutas, variables). La **prosa y la UI** pueden
@@ -284,13 +284,13 @@ Enums de PHP); sin sobre-ingeniería (nada de repos/DTOs/eventos salvo necesidad
 
 ## 13. Roadmap por fases
 
-| Fase             | Contenido                                                                                              | Estado            |
-| ---------------- | ------------------------------------------------------------------------------------------------------ | ----------------- |
-| **Fase 0**       | Documento + acuerdo de alcance                                                                         | ✅ **Completada** |
-| **Fase 1 (MVP)** | Scaffolding, auth+roles, clients, couriers, orders + ciclo de vida, corte, editar/cancelar, español/MX | ✅ **Completada** |
-| **Fase 2**       | Notificaciones, reportes, mejoras de desglose                                                          | ✅ **Completada** |
-| **Fase 3**       | Integración WhatsApp, portal de cliente                                                                | Pendiente         |
-| **Fase 4**       | Multi-negocio / SaaS                                                                                   | Pendiente         |
+| Fase             | Contenido                                                                                                                                         | Estado            |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| **Fase 0**       | Documento + acuerdo de alcance                                                                                                                    | ✅ **Completada** |
+| **Fase 1 (MVP)** | Scaffolding, auth+roles, clients, couriers, orders + ciclo de vida, corte, editar/cancelar, español/MX                                            | ✅ **Completada** |
+| **Fase 2**       | Notificaciones, reportes, mejoras de desglose                                                                                                     | ✅ **Completada** |
+| **Fase 3**       | Portal público de pedidos (self-service: guest + cuenta opcional con verificación de correo) + base multi-tenant (`tenant_id` sembrado). Ver §18. | Planeada          |
+| **Fase 4**       | SaaS: multi-tenant por subdominio (`rivers.mandaditos.app`), onboarding y branding por negocio, facturación. WhatsApp API = opción futura.        | Pendiente         |
 
 ---
 
@@ -373,3 +373,140 @@ Ya está construido:
 - **Asignación.** Los desactivados desaparecen del selector de asignación y la validación
   los rechaza; siguen disponibles como filtro en el listado de pedidos y se conservan en
   el pedido que ya tenían asignado, para no romper una edición ajena.
+
+---
+
+## 18. Fase 3 — Portal público de pedidos (self-service) + base multi-tenant
+
+> **Objetivo.** Que el **cliente final** levante su propio pedido desde un enlace que el
+> negocio comparte por WhatsApp (p. ej. `rivers.mandaditos.app/pedido`). El pedido cae
+> registrado como `requested` y el admin lo confirma, cotiza, asigna y cobra **igual que
+> hoy**. Reemplaza la idea original de integrar la **WhatsApp Business API**: mismo canal
+> (WhatsApp), pero la captura la hace el cliente en un formulario → datos limpios, sin API
+> de Meta, sin costo por mensaje, sin riesgo de ToS ni parseo de chat libre.
+
+### 18.1. Sub-fases
+
+| Sub-fase | Contenido                                                                                                                                                       | Multi-tenant                                               |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| **3a**   | Portal público (formulario guest-first) que crea `order = requested` y notifica al admin (reusa Fase 2).                                                        | Modelo con `tenant_id` **sembrado**, corre para el piloto. |
+| **3b**   | **Cuenta de cliente opcional** reusando la tabla `users` (rol `client`, auth de Fortify): correo + contraseña + **verificación por correo**. Historial/reorden. | Cuentas (`users`) acotadas al tenant.                      |
+| **3c**   | **SaaS**: resolución de tenant por **subdominio**, onboarding y branding por negocio.                                                                           | Subdominio real (`*.mandaditos.app`).                      |
+
+### 18.2. Decisiones confirmadas
+
+- **Guest-first.** Se pide como invitado; **crear cuenta es opcional** (solo si el cliente
+  lo desea): correo + contraseña + **confirmación de correo** (enlace firmado al correo del
+  cliente).
+- **La cuenta reusa la tabla `users`** (rol `client` + auth de Fortify ya existente); **no**
+  se agrega contraseña ni tabla de auth aparte para clientes.
+- **Sin "recordar en este dispositivo".** No hay token de dispositivo para invitados; el
+  invitado captura sus datos cada vez. El prefill de datos/direcciones es **solo** para
+  clientes con sesión iniciada.
+- **Los items se capturan como líneas**, no en texto libre: el cliente agrega renglones
+  tipo "1kg de jitomate" (uno por input), que se guardan como `order_items`.
+- **Un subdominio por negocio** para el SaaS: `rivers.mandaditos.app/pedido`.
+- El negocio **sigue** poniendo precio (`items_subtotal`, `commission`) y
+  **confirmando/cobrando**. El portal solo alimenta el frente del pipeline (`requested`).
+  Decisiones §0 intactas.
+
+### 18.3. Ruteo y resolución de tenant
+
+- Cada negocio = **`business`** (tenant) con **`slug` único** (= subdominio).
+- Middleware **`ResolveTenant`**: lee el subdominio (`rivers` en `rivers.mandaditos.app`),
+  carga el `Business` y fija el contexto para **acotar toda query** (global scope
+  `BelongsToTenant`).
+- Rutas **públicas** (sin auth de staff), bajo el subdominio del negocio:
+    - `GET /pedido` → formulario.
+    - `POST /pedido` → crea el pedido.
+    - (3b) `/cuenta` → registro / login / verificación del **cliente** (rol `client`,
+      reusando la auth de Fortify existente).
+- **Piloto/dev:** soportar también path (`/{business:slug}/pedido`) mientras no haya
+  subdominios. **Producción (3c):** DNS wildcard `*.mandaditos.app` + **TLS wildcard**
+  (HTTPS ya requerido por PWA / Web Push).
+
+### 18.4. Modelo de datos (deltas, en inglés)
+
+- **`businesses`** (tenant): `id`, `name`, `slug` (unique = subdominio), `status`, branding
+  opcional (`logo`, `brand_color` — 3c), `timestamps`.
+- **`tenant_id`** (fk → `businesses`) en `users`, `clients`, `addresses`, `orders`. Trait
+  **`BelongsToTenant`** con global scope. Seed piloto = 1 business (`rivers`).
+- **`orders.source`** enum(`manual`, `portal`) default `manual` (deja lugar a `whatsapp` a
+  futuro).
+- **Cuenta de cliente (3b) reusa la tabla `users`** — no hay contraseña ni tabla de auth
+  aparte:
+    - Ampliar el enum `UserRole` con `client`. Un cliente con cuenta es un `users` con
+      `role = client` y su `tenant_id`; el staff sigue siendo `admin` / `courier`.
+    - **`clients.user_id`** (fk → `users`, nullable): enlaza el contacto administrado por el
+      negocio con su cuenta. Un `client` puede existir **sin** cuenta (pedido guest o alta
+      por el negocio) y **reclamarse** después al crear la cuenta.
+    - **Auth reusada de Fortify**: login, contraseña, **verificación de correo** (`User` ya
+      es `MustVerifyEmail`), reset y confirmación — sin código de auth nuevo. Solo se
+      habilita un **registro acotado al rol `client`** bajo el portal (el registro público
+      de staff sigue apagado).
+    - Email único (por defecto global en `users`); si un mismo correo debiera servir a
+      varios negocios, se revisa a unicidad por tenant.
+    - Autorización: el rol `client` solo alcanza su área del portal (sus pedidos y
+      direcciones, dentro de su tenant); nunca las áreas de staff.
+- **Sin identidad guest por dispositivo.** El invitado no se "recuerda"; captura sus datos
+  cada vez. El prefill es solo para clientes con sesión.
+
+### 18.5. Flujo del pedido público (guest)
+
+1. Cliente abre `rivers.mandaditos.app/pedido`.
+2. Formulario mobile-first: nombre + teléfono → dirección (nueva; direcciones guardadas
+   **solo si el cliente inició sesión**) → **items como líneas** (repetidor: cada renglón
+   un input tipo "1kg de jitomate") → notas.
+3. `POST /pedido` → Form Request valida → resuelve/crea `client` (enlazado al `user` si hay
+   sesión) + `address` → crea `order` `status=requested`, `source=portal`, `tenant_id` del
+   negocio → crea un **`order_items`** por línea (`name` = el texto; `quantity` 1 por
+   defecto; el precio lo pone el negocio al comprar). `shopping_list` se **deriva** de las
+   líneas (conserva la columna y da un resumen al admin).
+4. **Reusa Fase 2**: notifica al admin (in-app + **Web Push**) "nuevo pedido de [cliente]".
+5. Pantalla de confirmación + CTA opcional "crea una cuenta para seguir tu pedido /
+   reordenar".
+6. Admin confirma, cotiza, asigna y cobra — **ciclo de vida sin cambios**.
+
+### 18.6. Cuenta de cliente (opcional, 3b)
+
+- CTA tras el pedido o en `/cuenta`: **Crear cuenta** (correo + contraseña) → crea un
+  `users` con `role = client` + `tenant_id` y envía **verificación de correo** (Fortify).
+  Sin verificar puede seguir pidiendo como guest; la cuenta **desbloquea** historial,
+  direcciones guardadas y reordenar.
+- **Reusa la auth de Fortify** ya montada para el staff (login, reset, verificación,
+  confirmación); no se crea un guard ni un flujo de auth aparte. Solo se habilita el
+  **registro para el rol `client`** bajo el portal.
+- **Vincular guest → cuenta**: al crear la cuenta se **reclama** el `client` existente del
+  tenant (match por correo/teléfono) enlazándolo vía `clients.user_id`; la verificación de
+  correo es la prueba de identidad.
+
+### 18.7. Seguridad del endpoint público
+
+- **Rate limiting** por IP + teléfono; **honeypot** + captcha ligero (p. ej.
+  Turnstile / hCaptcha) contra bots.
+- **Validación estricta** (Form Request), tope de líneas, **normalización de teléfono**
+  (E.164).
+- **Privacidad (crítico):** **no** prefilar direcciones por lookup de teléfono —
+  filtraría la dirección de otra persona a quien adivine el número. Prefill **solo** para
+  el cliente con **sesión iniciada** (rol `client`).
+- **Aislamiento por tenant:** toda operación pública acotada al `business` del subdominio
+  (global scope). Imposible leer/crear datos de otro negocio.
+
+### 18.8. Dependencias y notas de deploy
+
+- **`MAIL_MAILER` real** (hoy `log`) → bloqueante de la verificación de correo (3b).
+- **DNS wildcard `*.mandaditos.app` + TLS wildcard** → 3c (subdominios). Un solo
+  despliegue sirve a todos los subdominios; branding por tenant en 3c.
+- La **WhatsApp Business API** queda como **opción futura** (no prioritaria): el portal
+  cubre la necesidad con menos costo y riesgo.
+
+### 18.9. Secuencia sugerida
+
+1. **3a:** `businesses` + `tenant_id` + `BelongsToTenant` + `ResolveTenant` (por path en
+   piloto) → formulario público guest → `order = requested`, `source = portal` → aviso al
+   admin. Tests de aislamiento por tenant y de creación de pedido público.
+2. **3b:** rol `client` en `UserRole` + `clients.user_id`, registro acotado a `client` y
+   verificación de correo reusando Fortify (requiere `MAIL_MAILER` real), direcciones
+   guardadas y reorden.
+3. **3c:** subdominios reales (`*.mandaditos.app`), onboarding de negocios y branding →
+   SaaS.
