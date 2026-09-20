@@ -17,6 +17,9 @@ void createInertiaApp({
                 return AuthLayout;
             case name.startsWith('settings/'):
                 return [AppLayout, SettingsLayout];
+            // The public portal is for customers, not staff: no sidebar, no auth.
+            case name.startsWith('public/'):
+                return null;
             default:
                 return AppLayout;
         }
